@@ -24,28 +24,35 @@ v0.2.0では、見出し、説明、スローガン、ブランド名、時間�
 開始などの操作はアイコンにし、時間の数字と `+1min`、`+10min`、開始後の「×3」の案内を表示しています。
 設定手順の説明は、本人が求めたオンボーディングにだけ置いています。
 
+v0.3.0では、アプリ内に物理タイマーの絵を置く表現をやめ、スマホそのものをビジュアルバータイマーにする要望を受けました。
+縦向きは上段に棒、下段に数字、横向きは左に棒、右に数字です。
+動画アプリのような横向き切替ボタン、99分を超える時間、アクセスガイドが実行中でないときの案内とオンボーディングの見直しも同時に行いました。
+広告と課金は実装せず、方針案を[収益化の方針案](monetization.md)にまとめています。
+
 ## 機能ごとの対応
 
 | 要望 | 現在の実装 | 主なコード |
 | --- | --- | --- |
-| 写真のタイマーを再現 | 白いケース、液晶風の数字、黒い棒30本を描画 | [TimerView.swift](../ios/Thirty/TimerView.swift)の `PhysicalTimer`、`SevenSegmentTime` |
+| 写真のタイマーを再現 | 画面全体を液晶にし、7セグメントの数字と黒い棒30本を描画 | [TimerView.swift](../ios/Thirty/TimerView.swift)の `SlatBars`、`SevenSegmentTime` |
 | 開始 | 再生アイコンで、設定秒数から終了日時を作る。初期値は30分 | [Countdown.swift](../ios/Thirty/Countdown.swift)の `start` |
 | 一時停止 | 現在の残り時間を保存し、終了日時を解除する | `Countdown.pause` |
 | 再開 | 停止中の残り時間を現在日時に足し、新しい終了日時を作る | `Countdown.resume` |
 | 終了 | 状態を待機へ戻し、最後に設定した時間を保持する。通知と音も停止する | `Countdown.reset`、[TimerModel.swift](../ios/Thirty/TimerModel.swift)の `reset` |
 | 終わったら音が出る | 前景ではAVAudioPlayer、背景では同じWAVを使うローカル通知 | [TimerEffects.swift](../ios/Thirty/TimerEffects.swift)、`TimerModel.syncNotification` |
-| 時間を00:00〜99:59に変更 | 数字をタップし、分0〜99と秒0〜59のPickerで選ぶ | `TimePickerView`、`Countdown.setSeconds` |
-| +1min、+10minなどの追加 | 待機中、一時停止中、計測中に残り時間へ追加する。99:59で上限をかける | `TimerModel.addMinutes` |
+| 時間を00:00〜999:59に変更 | 数字をタップし、プリセットか、分0〜999と秒0〜59のPickerで選ぶ | `TimePickerView`、`Countdown.setSeconds` |
+| +1min、+10minなどの追加 | 待機中、一時停止中、計測中に残り時間へ追加する。999:59で上限をかける | `TimerModel.addMinutes` |
 | 00:00を扱う | 表示と設定は可能だが、開始は無効。計測中に00:00を設定すると待機へ戻る | `Countdown.start`、`setSeconds`、`TimerView` |
 | アプリを閉じても時間を保つ | 終了日時をUserDefaultsに保存し、復帰時に再計算する | `TimerModel.persist`、`sceneChanged` |
-| 初回にアクセスガイドを説明 | 3枚の案内を表示し、閉じたことだけを既読として保存する | [GuideView.swift](../ios/Thirty/GuideView.swift)、`TimerView`の `onboardingSeen.v2` |
+| 初回にアクセスガイドを説明 | 紹介1枚と設定3枚を表示し、閉じたことだけを既読として保存する | [GuideView.swift](../ios/Thirty/GuideView.swift)、`TimerView`の `onboardingSeen.v3` |
 | 設定でアクセスガイドをオンにする誘導 | 設定 → アクセシビリティ → アクセスガイドを図で示す | `OnboardingGuide`の1枚目 |
 | 必要ならFace IDをオンにする誘導 | パスコード設定からFace IDまたはTouch IDを有効にする任意の案内。省略可能 | `OnboardingGuide`の2枚目 |
-| ⓘから説明を再表示 | 初回と同じ案内を1枚目から開く | `TimerView.showGuide` |
+| 説明を再表示 | 「ロック」から設定手順を、月アイコンの長押しメニューから紹介を開く | `TimerView.guideStart`、`LockChip` |
 | アクセスガイドのオン／オフを検知 | 現在のセッションが実行中かを取得し、開始と終了の通知を監視する | `UIAccessibility.isGuidedAccessEnabled`、`guidedAccessStatusDidChangeNotification` |
 | アプリからアクセスガイドをオンにする | 一般の個人用端末で設定をオンにする処理は実装しない。本人が手動設定する | [iOSの制約](ios-capabilities.md) |
 | ボタン位置に3回押す案内 | iPhoneのサイド、iPadのトップ、ホームボタン付き機種のホームを案内する。位置は画面端の目安 | `HardwareButton`、`ButtonHint` |
 | 特に開始後にボタンの案内を出す | 開始と再開の後に表示し、実行中の検知、終了、手動で閉じる操作で消す | `TimerView.showHint` |
+| スマホ自体をタイマーにする | 縦は上下、横は左右に棒と数字を配置。計測中は4秒で操作を隠し、タップで戻す | `TimerView.portraitLayout`、`landscapeLayout`、`chromeHidden` |
+| 横向きにするボタン | iPhoneで向きを固定し、端末が同じ向きになったら自動回転に戻す | [Orientation.swift](../ios/Thirty/Orientation.swift) |
 | 省電力表示で画面を暗くする | 元の輝度を保存して計測中と一時停止中に減光し、終了、停止、アプリを離れる際に復元する | `TimerEffects.setDimmed`、`TimerModel.updateDisplay` |
 
 上表はソースにある実装の対応表です。
@@ -59,7 +66,7 @@ iOS本体のコンパイルや実機動作は未確認であり、実装済み�
 
 `+1min` と `+10min` は、その時点の残り時間に足します。
 たとえば27:26で `+1min` を押すと28:26になります。
-99:59を超える入力は99:59に収め、終了後に追加した場合は次に開始する時間を変更します。
+999:59を超える入力は999:59に収め、終了後に追加した場合は次に開始する時間を変更します。
 変更後の設定時間が棒30本の基準になるため、変更直後は棒が満量になります。
 
 ## 説明の既読とOS設定の区別

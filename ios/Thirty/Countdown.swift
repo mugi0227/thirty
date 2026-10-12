@@ -5,7 +5,8 @@ struct Countdown: Codable, Equatable {
     enum Phase: String, Codable { case ready, running, paused, finished }
 
     static let defaultSeconds = 1800
-    static let maximumSeconds = 99 * 60 + 59
+    static let maximumSeconds = 999 * 60 + 59
+    static let slats = 30
     var phase: Phase = .ready
     var configuredSeconds = defaultSeconds
     var deadline: Date?
@@ -40,7 +41,7 @@ struct Countdown: Codable, Equatable {
     func seconds(at now: Date) -> Int { Int(ceil(remaining(at: now))) }
     func bars(at now: Date) -> Int {
         guard configuredSeconds > 0 else { return 0 }
-        return Int(ceil(remaining(at: now) / Double(configuredSeconds) * 30))
+        return Int(ceil(remaining(at: now) / Double(configuredSeconds) * Double(Self.slats)))
     }
 
     mutating func start(at now: Date) {

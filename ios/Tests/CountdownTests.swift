@@ -59,12 +59,20 @@ final class CountdownTests: XCTestCase {
         timer.start(at: start)
         XCTAssertEqual(timer.phase, .ready)
         XCTAssertEqual(timer.bars(at: start), 0)
-        timer.setSeconds(10000, at: start)
-        XCTAssertEqual(timer.configuredSeconds, 5999)
+        timer.setSeconds(100_000, at: start)
+        XCTAssertEqual(timer.configuredSeconds, 59_999)
         timer.start(at: start)
-        XCTAssertEqual(timer.seconds(at: start), 5999)
-        timer.refresh(at: start.addingTimeInterval(5999))
+        XCTAssertEqual(timer.seconds(at: start), 59_999)
+        timer.refresh(at: start.addingTimeInterval(59_999))
         XCTAssertEqual(timer.phase, .finished)
+    }
+
+    func testDurationsBeyondNinetyNineMinutes() {
+        var timer = Countdown()
+        timer.setSeconds(120 * 60, at: start)
+        timer.start(at: start)
+        XCTAssertEqual(timer.seconds(at: start.addingTimeInterval(60 * 60)), 3600)
+        XCTAssertEqual(timer.bars(at: start.addingTimeInterval(60 * 60)), 15)
     }
 
     func testCustomBarsAndStopKeepChosenDuration() {

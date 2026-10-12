@@ -24,10 +24,10 @@ jobs:
           -sdk iphoneos -destination 'generic/platform=iOS'
           -derivedDataPath ../build CODE_SIGNING_ALLOWED=NO build
       - name: Package and verify IPA
-        run: python3 scripts/package_ipa.py build/Build/Products/Release-iphoneos/Thirty.app build/Thirty-0.2.0-AltStore.ipa
+        run: python3 scripts/package_ipa.py build/Build/Products/Release-iphoneos/Thirty.app build/Thirty-0.3.0-AltStore.ipa
       - uses: actions/upload-artifact@v4
         with:
-          name: Thirty-0.2.0-AltStore
+          name: Thirty-0.3.0-AltStore
           path: |
             build/*.ipa
             build/*.verification.json

@@ -56,3 +56,9 @@ iOSの低電力モードを切り替える処理はありません。
 本人の個人認可とFamily Controls entitlementが必要で、配布時にはAppleの承認も必要になります。
 個人認可は本人が設定から取り消せるため、本人が解除できないロックとしては扱えません。
 現在のThirtyには、その制限機能を含めていません。[Screen Timeの個人認可](https://developer.apple.com/videos/play/wwdc2022/110336/)、[配布権限の申請](https://developer.apple.com/documentation/FamilyControls/requesting-the-family-controls-entitlement)
+
+## 画面の向きの切り替え
+
+iOS 16以降の `UIWindowScene.requestGeometryUpdate` で、アプリから横向きや縦向きを要求できます。
+要求する向きは、アプリデリゲートの `supportedInterfaceOrientationsFor` が許可している必要があるため、Thirtyは一時的にその戻り値を固定します。
+画面の縦向きロックがオンでも、アプリが要求した向きには回転する想定です。実機での確認はしていません。[AppleのAPI説明](https://developer.apple.com/documentation/uikit/uiwindowscene/requestgeometryupdate(_:errorhandler:))

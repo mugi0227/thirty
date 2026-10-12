@@ -9,33 +9,33 @@
 <script src="app.js" defer></script>
 </head>
 <body>
-<main>
-  <header>
+<main id="screen" data-phase="ready">
+  <header class="chrome">
+    <button class="lock-chip" id="lock" aria-label="アクセスガイドでロックする方法"></button>
+    <span class="grow"></span>
     <button class="icon" id="dim" aria-label="画面を暗くする" aria-pressed="false"></button>
-    <button class="icon" id="guide" aria-label="アクセスガイドの説明"></button>
+    <button class="icon" id="rotate" aria-label="横向きにする"></button>
   </header>
-  <div class="space-top"></div>
-  <div class="device">
-    <div class="bars" aria-hidden="true"></div>
-    <button class="digits" id="time" aria-label="時間を変更" aria-description="00:00から99:59"></button>
-  </div>
-  <div class="increments"><button id="add-one" aria-label="1分追加">+1min</button><button id="add-ten" aria-label="10分追加">+10min</button></div>
-  <div class="space-bottom"></div>
-  <div class="controls"><button class="stop" id="stop" aria-label="終了" hidden></button><button class="primary" id="action" aria-label="開始"></button></div>
-  <div class="space-foot"></div>
+  <div class="bars" aria-hidden="true"></div>
+  <section class="readout">
+    <button class="digits" id="time" aria-label="時間を変更"></button>
+    <div class="controls chrome">
+      <div class="increments"><button id="add-one" aria-label="1分追加">+1</button><button id="add-ten" aria-label="10分追加">+10</button></div>
+      <div class="transport"><button class="stop" id="stop" aria-label="終了" hidden></button><button class="primary" id="action" aria-label="開始"></button></div>
+    </div>
+  </section>
   <span class="sr-only" id="status" role="status"></span>
 </main>
-<aside id="hint" hidden><div><span id="hint-name">サイドボタン</span><strong>×3</strong></div><span class="arrow" aria-hidden="true">→</span><button class="icon" id="close-hint" aria-label="ボタンの案内を閉じる"></button></aside>
-<dialog id="help" aria-label="アクセスガイドの説明">
-  <div class="modal-header"><button class="icon" id="back-guide" aria-label="前へ"></button><button class="icon" id="close-guide" aria-label="案内を閉じる"></button></div>
-  <div id="steps" aria-label="1 / 3"></div>
+<aside id="hint" hidden><span class="pulses" aria-hidden="true"><i></i><i></i><i></i></span><span><b>×3</b><small id="hint-name">サイドボタン</small></span><button class="icon" id="close-hint" aria-label="ボタンの案内を閉じる"></button></aside>
+<dialog id="help" aria-label="はじめに">
+  <div class="modal-header"><button class="icon" id="back-guide" aria-label="前へ"></button><div id="steps"></div><button class="icon" id="close-guide" aria-label="案内を閉じる"></button></div>
   <section id="stage"></section>
-  <button class="next" id="next-guide">次へ</button>
-  <button class="secondary" id="skip-guide">あとで</button>
+  <div class="modal-footer"><button class="next" id="next-guide" autofocus>次へ</button><button class="secondary" id="skip-guide">スキップ</button></div>
 </dialog>
 <dialog id="time-picker" aria-label="時間を変更">
-  <div class="modal-header"><button class="icon" id="cancel-time" aria-label="キャンセル"></button><button class="icon" id="save-time" aria-label="時間を決定"></button></div>
-  <div class="picker"><label><span>分</span><select id="minutes" aria-label="分"></select></label><span>:</span><label><span>秒</span><select id="seconds" aria-label="秒"></select></label></div>
+  <div class="modal-header"><button class="icon" id="cancel-time" aria-label="キャンセル"></button><strong>時間</strong><button class="icon" id="save-time" aria-label="時間を決定"></button></div>
+  <div class="presets" id="presets"></div>
+  <div class="picker"><label><span>分</span><select id="minutes" aria-label="分"></select></label><span class="sep">:</span><label><span>秒</span><select id="seconds" aria-label="秒"></select></label></div>
 </dialog>
 <audio id="alarm" src="alarm.wav" preload="auto" hidden></audio>
 </body>
