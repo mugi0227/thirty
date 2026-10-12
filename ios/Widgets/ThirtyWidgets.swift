@@ -168,7 +168,7 @@ struct ActivitySlats: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let gap: CGFloat = 2
+            let gap: CGFloat = 3
             let width = max(1, (geometry.size.width - gap * CGFloat(count - 1)) / CGFloat(count))
             let height = geometry.size.height
             HStack(spacing: gap) {
@@ -194,7 +194,6 @@ struct ActivitySlats: View {
             .progressViewStyle(.linear)
             .tint(ink)
             .frame(width: length)
-            .scaleEffect(x: 1, y: 2, anchor: .center)  // a little thicker than the system bar
             .rotationEffect(.degrees(-90))
         } else {
             let lit = state.total > 0 ? Int(ceil(state.remaining / state.total * Double(count))) : 0
