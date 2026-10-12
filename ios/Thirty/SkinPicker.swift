@@ -98,7 +98,7 @@ struct SkinPicker: View {
                 }
             } label: {
                 Group {
-                    if store.isBusy { ProgressView() } else { Text("\(store.priceText)で購入").font(.headline) }
+                    if store.isBusy { ProgressView() } else { Text(store.product == nil ? "Thirty+ を購入" : "\(store.priceText)で購入").font(.headline) }
                 }
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .foregroundStyle(TimerTheme.onAccent)

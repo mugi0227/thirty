@@ -114,7 +114,7 @@ struct OnboardingGuide: View {
         VStack(spacing: 0) {
             switch item {
             case .welcome:
-                MiniTimerDemo().frame(maxWidth: 260).padding(.vertical, 28)
+                MiniTimerDemo().frame(maxWidth: 190, maxHeight: 300).padding(.vertical, 20)
                 titleBlock(eyebrow: "THIRTY", title: "スマホを、そのまま\nタイマーに。",
                            body: "考える前に、スタートを押す。\n減っていくバーを横目に、\nひとつのことだけに取りかかる。")
             case .enable:
