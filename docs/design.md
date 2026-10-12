@@ -22,7 +22,7 @@ v0.3.0では画面全体を液晶にし、スマホの本体がタイマーの�
 
 | スキン選択 | アンバー | ルビー | ペーパー |
 | --- | --- | --- | --- |
-| <img src="images/skins.png" width="180" alt="6種類のスキンとThirty+の購入カード"> | <img src="images/skin-amber.png" width="180" alt="アンバーのスキン"> | <img src="images/skin-ruby.png" width="180" alt="ルビーのスキン"> | <img src="images/skin-paper.png" width="180" alt="ペーパーのスキン"> |
+| <img src="images/simulator/skins.png" width="180" alt="6種類のスキンとThirty+の購入カード"> | <img src="images/simulator/skin-amber.png" width="180" alt="アンバーのスキン"> | <img src="images/simulator/skin-ruby.png" width="180" alt="ルビーのスキン"> | <img src="images/simulator/skin-paper.png" width="180" alt="ペーパーのスキン"> |
 
 ## 縦と横のレイアウト
 

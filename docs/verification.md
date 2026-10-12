@@ -14,10 +14,10 @@ GitHub Actionsは手動実行専用で、今回のPushでMacビルドを起動�
 | 初回と「ロック」からの案内、端末別の案内のプレビュー | 確認済み |
 | WAVの形式と長さ、iOS用とプレビュー用の同一性 | 2.4秒のモノラル16bit PCMを確認 |
 | Pythonの構文、JavaScriptの構文、設定ファイル | 確認済み |
-| Swiftの時間管理テスト10件 | ソースを用意。未実行 |
-| SwiftUIの新しい画面、回転ボタン | ソースを用意。コンパイル未実施 |
-| iOSのコンパイルとIPA生成 | 未実施 |
-| Simulator、VoiceOver、Dynamic Type | 未実施 |
+| Swiftの時間管理テスト（macOS） | GitHub Actionsで10件成功 |
+| iOSのコンパイルと未署名IPA | GitHub ActionsのmacOS 15で成功 |
+| SimulatorのUIテスト3件と撮影 | 明るい配色と暗い配色で成功 |
+| VoiceOver、Dynamic Type | 未実施 |
 | 実機の音、通知、減光と復元、アクセスガイド | 未確認 |
 | 実機のホームボタン判定と案内位置 | 未確認 |
 
@@ -71,3 +71,18 @@ UIや音、輝度、OSのアクセスガイドの成功を確認するテスト�
 
 実機では、終了音と背景通知、通知拒否時の前景の音、アプリを離れた際の輝度復元、機種と向きごとの案内位置、アクセスガイド開始後の案内の非表示を確認する必要があります。
 プレビューの成功を、それらの実機確認の代わりにはしていません。
+
+## GitHub ActionsのmacOSで確認した動作
+
+`claude/` で始まるブランチへのPushで、[ios.yml](../.github/workflows/ios.yml) がmacOS 15のランナーで動きます。
+[ScreenshotTests.swift](../ios/UITests/ScreenshotTests.swift) がiPhone 16のSimulatorでアプリを操作し、スクリーンショットを成果物 `Thirty-simulator-screenshots` に保存します。
+
+- 初回の4枚の案内を順に進め、タイマー画面に戻る。
+- 開始、通知の許可、4秒後に操作が消える状態、端末を横にした状態、回転ボタンによる横向き、一時停止、時間の変更。
+- スキン画面（未購入）、ロックされたスキンの試着、Thirty+ を有効にした状態のアンバー、ナイトブルー、ペーパー、ルビー。
+
+| 計測中 | 暗い配色 | 横向き | スキン | アンバー |
+| --- | --- | --- | --- | --- |
+| <img src="images/simulator/running.png" width="150" alt="Simulatorの計測中の画面"> | <img src="images/simulator/running-dark.png" width="150" alt="暗い配色の計測中の画面"> | <img src="images/simulator/landscape.png" width="260" alt="横向きの画面"> | <img src="images/simulator/skins.png" width="150" alt="スキンの選択画面"> | <img src="images/simulator/skin-amber.png" width="150" alt="アンバーのスキン"> |
+
+Simulatorでは、App内課金の価格はStoreKitの設定ファイルを読み込まないため表示されません。購入の流れは、XcodeからStoreKitの設定ファイルを使って実行するか、実機のSandboxで確認します。
