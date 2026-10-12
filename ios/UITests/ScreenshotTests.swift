@@ -96,4 +96,27 @@ final class ScreenshotTests: XCTestCase {
         sleep(2)
         shot("11-time-picker")
     }
+
+    func testSkins() {
+        let app = launch(["-onboardingSeen.v3", "YES"])
+        XCTAssertTrue(app.buttons["スキン"].waitForExistence(timeout: 10))
+        app.buttons["スキン"].tap()
+        sleep(3)
+        shot("12-skins-locked")
+        app.buttons["アンバー"].tap()
+        sleep(1)
+        shot("13-skins-try-on")
+        app.terminate()
+
+        for skin in ["amber", "night", "paper", "ruby"] {
+            let paid = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", skin])
+            XCTAssertTrue(paid.buttons["開始"].waitForExistence(timeout: 10))
+            paid.buttons["開始"].tap()
+            sleep(1)
+            paid.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
+            sleep(2)
+            shot("14-skin-\(skin)")
+            paid.terminate()
+        }
+    }
 }

@@ -17,6 +17,7 @@ const icons = {
   lock: stroke('M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3'),
   unlock: stroke('M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 6.8-1.2'),
   chevron: stroke('M9 5l7 7-7 7'),
+  palette: stroke('M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1.3-1-1.6-1-2.6 0-.9.7-1.5 1.7-1.5H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z') + '<circle cx="7.5" cy="11" r="1.3"/><circle cx="10.5" cy="7" r="1.3"/><circle cx="15" cy="7.5" r="1.3"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${icons[name]}</svg>`;
 const read = k => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -36,6 +37,26 @@ let device = read('thirty.preview.device') || 'side';
 const names = { side: 'サイドボタン', top: 'トップボタン', home: 'ホームボタン' };
 if (!names[device]) device = 'side';
 
+const skins = [
+  ['classic', 'クラシック', '反射型の液晶。暗い配色ではバックライト'], ['paper', 'ペーパー', '電子ペーパーのような白'],
+  ['mint', 'ミント', 'やわらかい緑の液晶'], ['amber', 'アンバー', '琥珀色のバックライト'],
+  ['night', 'ナイトブルー', '青く光る夜の時計'], ['ruby', 'ルビー', '赤いLEDの表示'],
+];
+let hasPlus = read('thirty.plus') === 'true', skin = read('thirty.skin') || 'classic', previewSkin = skin;
+const usable = id => id === 'classic' || hasPlus;
+if (!skins.some(([id]) => id === skin) || !usable(skin)) skin = 'classic';
+const sample = (id, lit, count, big) => `<div class="sample${big ? ' big' : ''}" data-skin="${id}"><div class="s-bars">${Array.from({ length: count }, (_, i) => `<i class="${count - 1 - i < lit ? '' : 'off'}"></i>`).join('')}</div><hr><div class="s-time">30:00</div></div>`;
+function renderSkins() {
+  document.documentElement.dataset.skin = skin;
+  const [, name, detail] = skins.find(([id]) => id === previewSkin);
+  $('#skin-preview').outerHTML = sample(previewSkin, 9, 14, true).replace('<div class="sample big"', '<div class="sample big" id="skin-preview"');
+  $('#skin-name').textContent = name + (usable(previewSkin) ? '' : '（試着中）');
+  $('#skin-detail').textContent = detail;
+  $('#skin-grid').innerHTML = skins.map(([id, label]) => `<button class="skin-tile" data-id="${id}" aria-label="${label}" aria-current="${id === previewSkin}">${sample(id, 5, 7).replace('</div></div>', `</div>${usable(id) ? (id === skin ? '<span class="badge">✓</span>' : '') : '<span class="badge">🔒</span>'}</div>`)}${label}</button>`).join('');
+  $('#skin-grid').querySelectorAll('button').forEach(b => b.onclick = () => { previewSkin = b.dataset.id; if (usable(previewSkin)) { skin = previewSkin; write('thirty.skin', skin); } renderSkins(); });
+  $('#plus-card').hidden = hasPlus;
+  $('#thanks').hidden = !hasPlus;
+}
 const save = () => write(key, JSON.stringify(state));
 const remaining = () => state.phase === 'ready' ? state.configured : state.phase === 'finished' ? 0
   : state.phase === 'paused' ? state.remaining : Math.max(0, Math.min(state.configured, (state.deadline - Date.now()) / 1000));
@@ -62,7 +83,7 @@ function playAlarm() { stopAlarm(); alarm.play().catch(() => { $('#status').text
 function wake() {
   clearTimeout(idleTimer);
   idle = false;
-  if (state.phase === 'running' && !$('#help').open && !$('#time-picker').open)
+  if (state.phase === 'running' && !$('#help').open && !$('#time-picker').open && !$('#skins').open)
     idleTimer = setTimeout(() => { idle = true; render(false); }, idleAfter);
 }
 
@@ -127,6 +148,11 @@ $('#dim').onclick = () => { dimmed = !dimmed; write('thirty.dim', String(dimmed)
 $('#rotate').onclick = () => { forced = !forced; shownText = ''; render(); };
 $('#close-hint').onclick = () => { showHint = false; render(); };
 $('#lock').onclick = () => openGuide(1);
+$('#skin').onclick = () => { previewSkin = skin; renderSkins(); $('#skins').showModal(); wake(); };
+$('#close-skins').onclick = () => $('#skins').close();
+$('#skins').addEventListener('close', () => { previewSkin = skin; renderSkins(); wake(); render(false); });
+$('#buy').onclick = () => { hasPlus = true; write('thirty.plus', 'true'); skin = previewSkin; write('thirty.skin', skin); renderSkins(); };
+$('#restore').onclick = () => { hasPlus = read('thirty.plus') === 'true'; renderSkins(); };
 $('#lock').innerHTML = `<span class="pill">${icon('unlock')}<span>ロック</span></span>`;
 for (const type of ['pointerdown', 'keydown']) document.addEventListener(type, () => { if (idle) { wake(); render(false); } else wake(); }, true);
 addEventListener('resize', () => render(false));
@@ -194,10 +220,10 @@ $('#back-guide').onclick = () => { step = Math.max(firstStep, step - 1); guide()
 $('#help').addEventListener('cancel', () => write(seenKey, 'true'));
 $('#help').addEventListener('close', () => { wake(); render(); });
 
-for (const [selector, name] of [['#stop', 'stop'], ['#close-hint', 'close'], ['#back-guide', 'back'], ['#close-guide', 'close'], ['#cancel-time', 'close'], ['#save-time', 'check']])
+for (const [selector, name] of [['#skin', 'palette'], ['#close-skins', 'close'], ['#stop', 'stop'], ['#close-hint', 'close'], ['#back-guide', 'back'], ['#close-guide', 'close'], ['#cancel-time', 'close'], ['#save-time', 'check']])
   $(selector).innerHTML = icon(name);
 document.addEventListener('visibilitychange', () => render(false));
 setInterval(render, 250);
-render(false); wake();
+renderSkins(); render(false); wake();
 if (!read(seenKey)) openGuide(0);
 })();

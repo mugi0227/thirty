@@ -13,6 +13,7 @@
   <header class="chrome">
     <button class="lock-chip" id="lock" aria-label="アクセスガイドでロックする方法"></button>
     <span class="grow"></span>
+    <button class="icon" id="skin" aria-label="スキン"></button>
     <button class="icon" id="dim" aria-label="画面を暗くする" aria-pressed="false"></button>
     <button class="icon" id="rotate" aria-label="横向きにする"></button>
   </header>
@@ -36,6 +37,22 @@
   <div class="modal-header"><button class="icon" id="cancel-time" aria-label="キャンセル"></button><strong>時間</strong><button class="icon" id="save-time" aria-label="時間を決定"></button></div>
   <div class="presets" id="presets"></div>
   <div class="picker"><label><span>分</span><select id="minutes" aria-label="分"></select></label><span class="sep">:</span><label><span>秒</span><select id="seconds" aria-label="秒"></select></label></div>
+</dialog>
+<dialog id="skins" aria-label="スキン">
+  <div class="modal-header"><span class="icon" aria-hidden="true"></span><strong>スキン</strong><button class="icon" id="close-skins" aria-label="閉じる"></button></div>
+  <div class="skins-body">
+    <div class="sample big" id="skin-preview"></div>
+    <p class="skin-name"><b id="skin-name"></b><span id="skin-detail"></span></p>
+    <div class="skin-grid" id="skin-grid"></div>
+    <div class="plus-card" id="plus-card">
+      <strong>Thirty+</strong>
+      <p>すべてのスキンが使えます。<br>買い切りで、定期購入ではありません。</p>
+      <button class="next" id="buy">¥480で購入</button>
+      <button class="secondary" id="restore">購入を復元</button>
+      <small>プレビューでは実際の購入は発生しません。</small>
+    </div>
+    <p class="thanks" id="thanks" hidden>Thirty+ をご利用いただき、ありがとうございます。</p>
+  </div>
 </dialog>
 <audio id="alarm" src="alarm.wav" preload="auto" hidden></audio>
 </body>

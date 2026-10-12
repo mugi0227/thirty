@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 struct ThirtyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var model = TimerModel()
+    @StateObject private var store = Store()
 
     init() {
         #if DEBUG
@@ -38,6 +39,6 @@ struct ThirtyApp: App {
     }
 
     var body: some Scene {
-        WindowGroup { TimerView(model: model) }
+        WindowGroup { TimerView(model: model, store: store) }
     }
 }

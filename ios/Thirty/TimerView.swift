@@ -23,11 +23,16 @@ enum TimerTheme {
 
 struct TimerView: View {
     @ObservedObject var model: TimerModel
+    @ObservedObject var store: Store
     @StateObject private var orientation = OrientationController()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @AppStorage("onboardingSeen.v3") private var onboardingSeen = false
+    @AppStorage("skin") private var skinID = Skin.classic.id
+    @AppStorage("completedCount") private var completedCount = 0
+    @AppStorage("plusInvitationShown") private var plusInvitationShown = false
+    @State private var showSkins = false
     @State private var guideStart: OnboardingGuide.Page?
     @State private var showTime = false
     @State private var showHint = false
@@ -35,6 +40,13 @@ struct TimerView: View {
     @State private var hardwareButton: HardwareButton = .side
     private let ticker = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
     private let idleDelay: TimeInterval = 4
+
+    private var skin: Skin { Skin.resolve(skinID, hasPlus: store.hasPlus) }
+
+    /// One gentle invitation after the third finished session, never while timing.
+    private var showsInvitation: Bool {
+        model.countdown.phase == .finished && completedCount >= 3 && !plusInvitationShown && !store.hasPlus
+    }
 
     /// While running, the controls step aside and the phone is only the timer.
     private var chromeHidden: Bool {
@@ -46,7 +58,7 @@ struct TimerView: View {
         GeometryReader { geometry in
             let landscape = geometry.size.width > geometry.size.height
             ZStack {
-                TimerTheme.lcd.ignoresSafeArea()
+                skin.lcd.ignoresSafeArea()
                 Group {
                     if landscape { landscapeLayout(geometry.size) } else { portraitLayout }
                 }
@@ -59,8 +71,10 @@ struct TimerView: View {
             .onTapGesture { lastTouch = Date() }
             .onAppear { hardwareButton = HardwareButton.current(hasHomeIndicator: geometry.safeAreaInsets.bottom > 0) }
         }
-        .foregroundStyle(TimerTheme.ink)
-        .tint(TimerTheme.ink)
+        .foregroundStyle(skin.ink)
+        .tint(skin.ink)
+        .environment(\.skin, skin)
+        .preferredColorScheme(skin.colorScheme)
         .statusBarHidden(chromeHidden)
         .persistentSystemOverlays(chromeHidden ? .hidden : .automatic)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: chromeHidden)
@@ -71,7 +85,10 @@ struct TimerView: View {
             showHint = model.countdown.phase == .running
         }
         .onChange(of: scenePhase) { model.sceneChanged($0) }
-        .onChange(of: model.countdown.phase) { _ in lastTouch = Date() }
+        .onChange(of: model.countdown.phase) { phase in
+            lastTouch = Date()
+            if phase == .finished { completedCount += 1 }
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIAccessibility.guidedAccessStatusDidChangeNotification)) { _ in
             model.isGuidedAccessActive = UIAccessibility.isGuidedAccessEnabled
             if model.isGuidedAccessActive { showHint = false }
@@ -82,6 +99,9 @@ struct TimerView: View {
                 onboardingSeen = true
                 guideStart = nil
             }
+        }
+        .sheet(isPresented: $showSkins) {
+            SkinPicker(store: store, selectedID: $skinID)
         }
         .sheet(isPresented: $showTime) {
             TimePickerView(seconds: model.countdown.phase == .finished ? model.countdown.configuredSeconds : model.seconds) {
@@ -97,9 +117,10 @@ struct TimerView: View {
             topBar(landscape: false)
             SlatBars(lit: model.bars, stacked: true)
                 .padding(.top, 12).padding(.bottom, 18)
-            Rectangle().fill(TimerTheme.line).frame(height: 1.5)
+            Rectangle().fill(skin.line).frame(height: 1.5)
             digits.frame(maxWidth: 560).padding(.top, 24)
-            controls(compact: false).padding(.top, 28)
+            if showsInvitation { invitation.padding(.top, 16) }
+            controls(compact: false).padding(.top, showsInvitation ? 16 : 28)
         }
     }
 
@@ -108,7 +129,7 @@ struct TimerView: View {
             topBar(landscape: true)
             HStack(spacing: 24) {
                 SlatBars(lit: model.bars, stacked: false)
-                Rectangle().fill(TimerTheme.line).frame(width: 1.5)
+                Rectangle().fill(skin.line).frame(width: 1.5)
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
                     digits
@@ -147,12 +168,17 @@ struct TimerView: View {
                 guideStart = model.isGuidedAccessActive ? .triple : .enable
             }
             Spacer()
+            iconButton("paintpalette", label: "スキン") {
+                lastTouch = Date()
+                showSkins = true
+            }
             Menu {
                 Toggle(isOn: $model.dimScreen) { Label("計測中は画面を暗くする", systemImage: "moon") }
                 Toggle(isOn: $model.keepScreenOn) { Label("計測中は画面を消さない", systemImage: "sun.max") }
                 if model.notificationNotice != nil {
                     Button { openNotificationSettings() } label: { Label("終了通知の設定", systemImage: "bell.badge") }
                 }
+                Button { showSkins = true } label: { Label("スキン", systemImage: "paintpalette") }
                 Button { guideStart = .welcome } label: { Label("はじめに", systemImage: "questionmark.circle") }
             } label: {
                 Image(systemName: model.dimScreen ? "moon.fill" : "moon")
@@ -188,7 +214,7 @@ struct TimerView: View {
                     Button { lastTouch = Date(); model.reset(); showHint = false } label: {
                         Image(systemName: "stop.fill").font(.system(size: 17))
                             .frame(width: compact ? 48 : 56, height: compact ? 48 : 56)
-                            .background(TimerTheme.soft, in: Circle())
+                            .background(skin.soft, in: Circle())
                     }
                     .buttonStyle(SoftPressStyle()).accessibilityLabel("終了")
                 }
@@ -196,8 +222,8 @@ struct TimerView: View {
                     Image(systemName: model.countdown.phase == .running ? "pause.fill" : "play.fill")
                         .font(.system(size: compact ? 24 : 28))
                         .frame(width: compact ? 64 : 76, height: compact ? 64 : 76)
-                        .foregroundStyle(TimerTheme.lcd)
-                        .background(TimerTheme.ink, in: Circle())
+                        .foregroundStyle(skin.lcd)
+                        .background(skin.ink, in: Circle())
                 }
                 .buttonStyle(SoftPressStyle())
                 .accessibilityLabel(primaryLabel)
@@ -234,7 +260,7 @@ struct TimerView: View {
                 Text("分").font(.system(size: 12)).opacity(0.7)
             }
             .frame(minWidth: 72, minHeight: 44).padding(.horizontal, 6)
-            .overlay(Capsule().stroke(TimerTheme.line, lineWidth: 1.5))
+            .overlay(Capsule().stroke(skin.line, lineWidth: 1.5))
             .contentShape(Capsule())
         }
         .buttonStyle(SoftPressStyle())
@@ -248,6 +274,25 @@ struct TimerView: View {
         .buttonStyle(SoftPressStyle()).accessibilityLabel(label)
     }
 
+    private var invitation: some View {
+        HStack(spacing: 8) {
+            Button {
+                plusInvitationShown = true
+                showSkins = true
+            } label: {
+                Label("気に入ったら、Thirty+ でスキンを", systemImage: "paintpalette")
+                    .font(.system(size: 13, weight: .semibold)).frame(minHeight: 44)
+            }
+            Button { plusInvitationShown = true } label: {
+                Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).frame(width: 36, height: 44)
+            }
+            .accessibilityLabel("閉じる")
+        }
+        .padding(.leading, 14).padding(.trailing, 4)
+        .overlay(Capsule().stroke(skin.line, lineWidth: 1.5))
+        .buttonStyle(SoftPressStyle())
+    }
+
     private func openNotificationSettings() {
         if let url = URL(string: UIApplication.openNotificationSettingsURLString) { UIApplication.shared.open(url) }
     }
@@ -255,6 +300,7 @@ struct TimerView: View {
 
 /// Shows whether the screen is pinned, and opens the setup when it is not.
 struct LockChip: View {
+    @Environment(\.skin) private var skin
     let active: Bool
     let action: () -> Void
     var body: some View {
@@ -264,9 +310,9 @@ struct LockChip: View {
                 Text(active ? "ロック中" : "ロック").font(.system(size: 14, weight: .semibold))
             }
             .padding(.leading, 11).padding(.trailing, 14).frame(height: 36)
-            .foregroundStyle(active ? TimerTheme.lcd : TimerTheme.ink)
-            .background(active ? TimerTheme.ink : .clear, in: Capsule())
-            .overlay(Capsule().stroke(active ? TimerTheme.ink : TimerTheme.line, lineWidth: 1.5))
+            .foregroundStyle(active ? skin.lcd : skin.ink)
+            .background(active ? skin.ink : .clear, in: Capsule())
+            .overlay(Capsule().stroke(active ? skin.ink : skin.line, lineWidth: 1.5))
             .frame(minHeight: 44).contentShape(Rectangle())
         }
         .buttonStyle(SoftPressStyle())
@@ -277,6 +323,7 @@ struct LockChip: View {
 /// Thirty slats, like the physical timer. Stacked in portrait so the level
 /// drains from the top; side by side in landscape, draining from the right.
 struct SlatBars: View {
+    @Environment(\.skin) private var skin
     let lit: Int
     let stacked: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -290,7 +337,7 @@ struct SlatBars: View {
                 ForEach(0..<Countdown.slats, id: \.self) { index in
                     let fromStart = stacked ? Countdown.slats - 1 - index : index
                     RoundedRectangle(cornerRadius: 1)
-                        .fill(fromStart < lit ? TimerTheme.ink : TimerTheme.ghost)
+                        .fill(fromStart < lit ? skin.ink : skin.ghost)
                 }
             }
         }
@@ -301,6 +348,7 @@ struct SlatBars: View {
 
 /// Points at the hardware button that starts Guided Access.
 struct ButtonHint: View {
+    @Environment(\.skin) private var skin
     let kind: HardwareButton
     let onClose: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -332,7 +380,7 @@ struct ButtonHint: View {
                 : min(geometry.size.height - size.height / 2, max(size.height / 2, point.y * geometry.size.height))
             content(vertical: vertical)
                 .frame(width: size.width, height: size.height)
-                .background(TimerTheme.ink, in: edgeShape(point))
+                .background(skin.ink, in: edgeShape(point))
                 .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
                 .position(x: x, y: y)
         }
@@ -350,7 +398,7 @@ struct ButtonHint: View {
             Button(action: onClose) { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).frame(width: 36, height: 44) }
                 .accessibilityLabel("ボタンの案内を閉じる")
         }
-        .foregroundStyle(TimerTheme.lcd)
+        .foregroundStyle(skin.lcd)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(kind.title)を3回連続で押すと、アクセスガイドでロックできます")
     }
@@ -458,6 +506,7 @@ struct SoftPressStyle: ButtonStyle {
 /// Seven-segment digits drawn as shapes, with unlit segments left faintly
 /// visible like a real LCD. Three-digit minutes widen the readout.
 struct SevenSegmentTime: View {
+    @Environment(\.skin) private var skin
     let text: String
     private var digitCount: CGFloat { CGFloat(text.filter(\.isNumber).count) }
 
@@ -475,8 +524,8 @@ struct SevenSegmentTime: View {
                     } else {
                         let lit = SegmentDigit.masks[character.wholeNumberValue ?? 0]
                         ZStack {
-                            SegmentDigit(segments: Set(0..<7).subtracting(lit)).fill(TimerTheme.ink.opacity(0.07))
-                            SegmentDigit(segments: lit).fill(TimerTheme.ink)
+                            SegmentDigit(segments: Set(0..<7).subtracting(lit)).fill(skin.ink.opacity(0.07))
+                            SegmentDigit(segments: lit).fill(skin.ink)
                         }
                         .frame(width: height * 0.55)
                     }
