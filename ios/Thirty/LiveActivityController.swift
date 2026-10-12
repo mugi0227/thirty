@@ -20,7 +20,8 @@ final class LiveActivityController {
             return
         }
         let state = TimerActivityAttributes.ContentState(
-            deadline: countdown.phase == .running ? countdown.deadline : nil,
+            // The system counts against the real clock; AppClock.lead is 0 outside debug captures.
+            deadline: countdown.phase == .running ? countdown.deadline?.addingTimeInterval(-AppClock.lead) : nil,
             remaining: countdown.remaining(at: now),
             total: TimeInterval(countdown.configuredSeconds),
             isBreak: isBreak)

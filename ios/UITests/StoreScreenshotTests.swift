@@ -80,7 +80,7 @@ final class StoreScreenshotTests: XCTestCase {
             sleep(2)
             shot("06-skins")
         } else {
-            let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "amber", "-ThirtyJumpAfterStart", "300"])
+            let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "amber", "-ThirtyJumpAfterStart", "450"])
             startRunning(app)
             sleep(2)
             XCUIDevice.shared.press(.home)

@@ -17,9 +17,12 @@ enum AppClock {
     static func didStart() {
         offset += UserDefaults.standard.double(forKey: "ThirtyJumpAfterStart")
     }
+    /// How far the debug clock runs ahead, so the Live Activity can match the app.
+    static var lead: TimeInterval { now().timeIntervalSince(Date()) }
     #else
     static func now() -> Date { Date() }
     static func didStart() {}
+    static var lead: TimeInterval { 0 }
     #endif
 }
 
