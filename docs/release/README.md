@@ -8,7 +8,7 @@
 | もの | 場所 | 状態 |
 | --- | --- | --- |
 | App Storeのスクリーンショット（キャプション付き） | GitHub Actionsの成果物 `store-iphone-medium` / `store-iphone-large` / `store-ipad-13`、[images](images/) | CIで撮影 |
-| App プレビュー動画（886×1920、30fps、H.264、約25秒） | 成果物 `app-preview-video`、[images](images/) | CIで録画 |
+| App プレビュー動画（886×1920、30fps、H.264、約28秒。デバッグ版で時間を100倍に早送り） | 成果物 `app-preview-video`、[images](images/) | CIで録画 |
 | 説明文、キーワード、サブタイトルなど | [metadata-ja.md](metadata-ja.md) | 下書き済み |
 | プライバシーポリシー | [privacy-policy.md](privacy-policy.md) | 下書き済み |
 | サポートページ | [support.md](support.md) | 下書き済み |
@@ -55,4 +55,15 @@
 ## iPhone Duoについて
 
 App Storeの仕様ページにiPhone Duoの画面サイズが載っています。必須になるのは2027年4月からで、条件はiOS 27.1 SDK以降でのビルドです。
-今回の申請には要りませんが、CIの `iphone-duo-probe` ジョブで、GitHubのXcode 27イメージにDuoのSimulatorが入っているかを毎回記録します。入り次第、撮影ジョブに追加します。
+今回の申請（Xcode 26、iOS 26 SDK）には不要です。
+
+GitHubのXcode 27イメージ（2026年10月時点）には「iPhone Duo」の機種定義がありますが、それを起動できるiOSのランタイムがありません。iOS 27.0と、ダウンロードしたiOS 27.2のどちらでも「Incompatible device」になりました。
+CIの `iphone-duo` ジョブは、Duoに対応したランタイムが入っているかを毎回確かめ、入っていれば撮影まで自動で行います。今はスキップの記録だけが残ります。
+
+## スクリーンショットの作り方
+
+- `ios/UITests/StoreScreenshotTests.swift` がSimulatorを操作して撮影します。時刻は9:41、Simulatorの言語は日本語、通知の許可は出さない設定です。
+- 計測中の画面は、開始直後に時計を進める（デバッグ版だけの `-ThirtyJumpAfterStart`）ことで、毎回同じくらいの残り時間で撮れます。
+- `scripts/make_store_screenshots.py` が見出しを付けます。書体は日本語の **Zen Kaku Gothic New**（`STORE_FONT=mincho` で **Zen Old Mincho**）。どちらもOFLで、`scripts/fetch_fonts.sh` が取得します。中国語用の書体に切り替わって字形が変わることはありません。
+- 横向きの画面は、横長のストア画像（例：2622×1206）として出力します。
+- ロック画面の画像は、時計とライブアクティビティの部分だけを切り出し、Simulatorのホーム画面やテスト用のアイコンが写らないようにしています。
