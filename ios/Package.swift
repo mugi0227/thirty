@@ -5,7 +5,7 @@ let package = Package(
     name: "ThirtyCore",
     products: [.library(name: "ThirtyCore", targets: ["ThirtyCore"])],
     targets: [
-        .target(name: "ThirtyCore", path: "Thirty", exclude: ["TimerModel.swift", "TimerView.swift", "TimerEffects.swift", "GuideView.swift", "ThirtyApp.swift", "Assets.xcassets", "alarm.wav", "Info.plist"], sources: ["Countdown.swift"]),
+        .target(name: "ThirtyCore", path: "Thirty", exclude: ["TimerModel.swift", "TimerView.swift", "TimerEffects.swift", "GuideView.swift", "ThirtyApp.swift", "Orientation.swift", "Skin.swift", "Store.swift", "SkinPicker.swift", "LiveActivityController.swift", "SettingsView.swift", "beep.wav", "bell.wav", "soft.wav", "Assets.xcassets", "alarm.wav", "Info.plist"], sources: ["Countdown.swift"]),
         .testTarget(name: "ThirtyCoreTests", dependencies: ["ThirtyCore"], path: "Tests")
     ]
 )

@@ -11,8 +11,9 @@ iOS本体はSwiftUIとAppleの標準フレームワークで実装していま�
 | [ThirtyApp.swift](../ios/Thirty/ThirtyApp.swift) | アプリの起動と通知delegate。前景の通知からの二重発音を避ける |
 | [Countdown.swift](../ios/Thirty/Countdown.swift) | 時間の計算、4つの状態、時間変更、保存用データ |
 | [TimerModel.swift](../ios/Thirty/TimerModel.swift) | SwiftUIへの状態公開、UserDefaultsへの保存、通知予約、ライフサイクル |
-| [TimerView.swift](../ios/Thirty/TimerView.swift) | タイマーの描画、アイコン操作、時間のPicker、ボタン位置の案内 |
-| [GuideView.swift](../ios/Thirty/GuideView.swift) | 初回とⓘの3枚の案内、設定画面の図、生体認証の種類に応じた表示 |
+| [TimerView.swift](../ios/Thirty/TimerView.swift) | 全画面の液晶、縦横のレイアウト、操作の自動非表示、時間のPicker、ボタン位置の案内 |
+| [Orientation.swift](../ios/Thirty/Orientation.swift) | 回転ボタンによる向きの固定と、端末を同じ向きにしたときの解除 |
+| [GuideView.swift](../ios/Thirty/GuideView.swift) | 紹介と3段階の設定案内、設定アプリ風の図、ボタンを押すアニメーション |
 | [TimerEffects.swift](../ios/Thirty/TimerEffects.swift) | 音の再生、輝度の保存と復元、物理ボタンの種類の推定 |
 | [preview/](../preview/) | ブラウザで操作できる独立した画面プレビュー |
 | [project.yml](../ios/project.yml) | XcodeGenによるiOSプロジェクトの生成設定 |
@@ -42,10 +43,10 @@ iOSがアプリを背景で停止しても、表示用タイマーの呼び出�
 
 ```text
 残り秒数 = ceil(max(0, min(設定秒数, 終了日時 - 現在日時)))
-表示する棒 = ceil(残り時間 / 設定時間 × 30)
+表示する棒 = ceil(残り時間 / 設定時間 × 30)　（Countdown.slats）
 ```
 
-設定時間は0〜5999秒です。
+設定時間は0〜59999秒（999:59）です。100分以上は分を3桁で表示します。
 設定時間が0の場合は、棒を0本とし、開始を受け付けません。
 保存された初版のデータに設定秒数がない場合は、30分として読み込みます。
 端末の日時が手動で変更された場合は、保存した終了日時に対する残り時間も変わります。
@@ -82,3 +83,9 @@ iOS全体の低電力モードは操作しません。
 物理ボタンの種類は、iPhoneかiPadかと、下部のセーフエリアからホームインジケータの有無を推定して選びます。
 案内の位置は画面端に置き、画面の向きに応じて移動する実装です。
 正確なボタン座標や全機種での適切な表示を実機で検証したわけではありません。
+
+## 画面の向き
+
+iPhoneの回転ボタンは、`requestGeometryUpdate` で横向き（または縦向き）を要求し、`supportedInterfaceOrientationsFor` が返す向きを一時的に固定します。
+端末の物理的な向きが固定した向きと一致したら、固定を外して通常の自動回転に戻します。動画アプリの全画面ボタンと同じ考え方です。
+iPadはウィンドウの大きさが変わるため、回転ボタンを出さずOSの回転に任せます。

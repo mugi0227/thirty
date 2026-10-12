@@ -1,11 +1,13 @@
 {
   "preview_only": true,
   "checks": [
-    "First-launch 3-step onboarding, optional biometry skip, no main copy; seen flag survives reload",
-    "00:00 disables start; 99:59 maximum; quick-add seconds carry",
-    "Start, pause, resume, deadline restoration, 30-bar remaining fraction",
+    "First launch shows 4 pages (welcome + 3 optional setup steps); seen flag survives reload; main screen has no copy beyond the lock chip",
+    "00:00 disables start; 999:59 maximum; 3-digit minutes; presets; quick-add seconds carry",
+    "Controls hide 4 s into a run and return on tap",
+    "Rotate button switches to the landscape bar-timer layout and back",
+    "Start, pause, resume, deadline restoration, 30-slat remaining fraction",
     "Running edit and quick-add; chime play event exactly once; dim restores at completion; stop keeps chosen duration",
-    "Info reopens onboarding; side/top/home hints and dismissal (preview device choices only)"
+    "Lock chip opens the 3 setup steps; side/top/home hints and dismissal (preview device choices only)"
   ],
   "layouts": [
     {
@@ -46,6 +48,13 @@
     {
       "width": 390,
       "height": 844,
+      "theme": "dark",
+      "overflow": false,
+      "touch_targets": "passed"
+    },
+    {
+      "width": 844,
+      "height": 390,
       "theme": "dark",
       "overflow": false,
       "touch_targets": "passed"

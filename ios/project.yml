@@ -2,25 +2,78 @@ name: Thirty
 options:
   bundleIdPrefix: jp.mugilab
   deploymentTarget:
-    iOS: '16.0'
+    iOS: '17.0'
   xcodeVersion: '16.0'
 settings:
   base:
     SWIFT_VERSION: '5.0'
-    MARKETING_VERSION: '0.2.0'
-    CURRENT_PROJECT_VERSION: '2'
+    MARKETING_VERSION: '0.3.0'
+    CURRENT_PROJECT_VERSION: '3'
     CODE_SIGNING_ALLOWED: NO
+fileGroups:
+  - Thirty.storekit
+schemes:
+  Thirty:
+    build:
+      targets:
+        Thirty: all
+        ThirtyUITests: [test]
+    run:
+      config: Debug
+      storeKitConfiguration: Thirty.storekit
+    test:
+      config: Debug
+      targets:
+        - ThirtyUITests
+    archive:
+      config: Release
 targets:
+  ThirtyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - UITests
+    dependencies:
+      - target: Thirty
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.mugilab.thirty.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Thirty
+        TARGETED_DEVICE_FAMILY: '1,2'
+  ThirtyWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widgets
+      - Shared
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Thirty
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.mugilab.thirty.widgets
+        TARGETED_DEVICE_FAMILY: '1,2'
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) WIDGET_EXTENSION
+        GENERATE_INFOPLIST_FILE: NO
   Thirty:
     type: application
     platform: iOS
     sources:
       - Thirty
+      - Shared
+    dependencies:
+      - target: ThirtyWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: jp.mugilab.thirty
         TARGETED_DEVICE_FAMILY: '1,2'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIcon-Paper AppIcon-Mint AppIcon-Amber AppIcon-Night AppIcon-Ruby
     info:
       path: Thirty/Info.plist
       properties:
@@ -29,6 +82,20 @@ targets:
         UIApplicationSupportsIndirectInputEvents: true
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen: {}
+        NSSupportsLiveActivities: true
+        CFBundleURLTypes:
+          - CFBundleURLName: jp.mugilab.thirty
+            CFBundleURLSchemes: [thirty]
+        UIApplicationShortcutItems:
+          - UIApplicationShortcutItemType: start30
+            UIApplicationShortcutItemTitle: 30分スタート
+            UIApplicationShortcutItemIconSymbolName: play.fill
+          - UIApplicationShortcutItemType: start15
+            UIApplicationShortcutItemTitle: 15分スタート
+            UIApplicationShortcutItemIconSymbolName: play
+          - UIApplicationShortcutItemType: start60
+            UIApplicationShortcutItemTitle: 60分スタート
+            UIApplicationShortcutItemIconSymbolName: play
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
