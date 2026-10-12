@@ -24,6 +24,22 @@ final class StoreScreenshotTests: XCTestCase {
         try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
     }
 
+    /// The Simulator posts its own notices (such as Apple Intelligence setup) on
+    /// the Lock Screen. Swipe them away so the capture keeps the full screen.
+    private func clearNotifications(_ springboard: XCUIApplication) {
+        for _ in 0..<3 {
+            let notice = springboard.descendants(matching: .any)
+                .matching(NSPredicate(format: "label CONTAINS[c] %@ OR label CONTAINS[c] %@", "Apple Intelligence", "通知"))
+                .element(boundBy: 0)
+            guard notice.exists, notice.isHittable else { return }
+            notice.swipeLeft()
+            for label in ["消去", "Clear"] where springboard.buttons[label].waitForExistence(timeout: 1) {
+                springboard.buttons[label].tap()
+            }
+            sleep(1)
+        }
+    }
+
     private func closeHint(_ app: XCUIApplication) {
         let close = app.buttons["ボタンの案内を閉じる"]
         if close.waitForExistence(timeout: 2) { close.tap() }
@@ -106,6 +122,7 @@ final class StoreScreenshotTests: XCTestCase {
                     springboard.buttons[label].tap()
                     sleep(2)
                 }
+                clearNotifications(springboard)
                 shot("06-lock-screen")
             }
         }
