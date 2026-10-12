@@ -6,8 +6,12 @@ final class TimerEffects: NSObject, AVAudioPlayerDelegate {
     private var player: AVAudioPlayer?
     private var previousBrightness: CGFloat?
 
-    func playAlarm() {
-        guard let url = Bundle.main.url(forResource: "alarm", withExtension: "wav") else { return }
+    func playAlarm(_ sound: EndSound = .chime) {
+        guard let name = sound.resourceName else {
+            vibrate()
+            return
+        }
+        guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else { return }
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .default, options: [.duckOthers])
@@ -18,6 +22,14 @@ final class TimerEffects: NSObject, AVAudioPlayerDelegate {
             player?.play()
         } catch { stopAlarm() }
     }
+    /// Three firm taps for the silent choice.
+    private func vibrate() {
+        let generator = UIImpactFeedbackGenerator(style: .heavy)
+        for index in 0..<3 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.35) { generator.impactOccurred() }
+        }
+    }
+
     func stopAlarm() {
         player?.stop()
         player = nil
@@ -38,6 +50,24 @@ final class TimerEffects: NSObject, AVAudioPlayerDelegate {
             self.previousBrightness = nil
         }
     }
+}
+
+/// End-of-timer sounds. The chime is free; the rest come with Thirty+.
+enum EndSound: String, CaseIterable, Identifiable {
+    case chime = "alarm", beep, bell, soft, vibrate
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .chime: return "チャイム"
+        case .beep: return "ピピピ（キッチンタイマー）"
+        case .bell: return "ベル"
+        case .soft: return "やさしい音"
+        case .vibrate: return "振動のみ"
+        }
+    }
+    var isFree: Bool { self == .chime }
+    var resourceName: String? { self == .vibrate ? nil : rawValue }
+    var fileName: String? { resourceName.map { "\($0).wav" } }
 }
 
 enum HardwareButton: String {

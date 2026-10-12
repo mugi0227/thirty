@@ -73,6 +73,7 @@ final class CountdownTests: XCTestCase {
         timer.start(at: start)
         XCTAssertEqual(timer.seconds(at: start.addingTimeInterval(60 * 60)), 3600)
         XCTAssertEqual(timer.bars(at: start.addingTimeInterval(60 * 60)), 15)
+        XCTAssertEqual(timer.bars(at: start.addingTimeInterval(60 * 60), slats: 60), 30)
     }
 
     func testCustomBarsAndStopKeepChosenDuration() {

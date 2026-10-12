@@ -33,6 +33,10 @@ struct TimerView: View {
     @AppStorage("completedCount") private var completedCount = 0
     @AppStorage("plusInvitationShown") private var plusInvitationShown = false
     @State private var showSkins = false
+    @State private var showSettings = false
+    /// Slats lit during the short fill-up that marks a start.
+    @State private var ritualLit: Int?
+    private static var launched = false
     @State private var guideStart: OnboardingGuide.Page?
     @State private var showTime = false
     @State private var showHint = false
@@ -79,15 +83,31 @@ struct TimerView: View {
         .persistentSystemOverlays(chromeHidden ? .hidden : .automatic)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: chromeHidden)
         .onReceive(ticker) { if scenePhase == .active { model.tick(at: $0) } }
+        .onReceive(store.$hasPlus) { model.hasPlus = $0 }
+        .onOpenURL { url in
+            guard url.scheme == ThirtyLink.scheme, url.host == "start" else { return }
+            let minutes = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "minutes" }?.value.flatMap(Int.init)
+            model.startNow(minutes: minutes)
+        }
         .onAppear {
+            model.hasPlus = store.hasPlus
             model.sceneChanged(scenePhase)
             if !onboardingSeen { guideStart = .welcome }
+            if !Self.launched {
+                Self.launched = true
+                if onboardingSeen && model.startOnLaunch { model.startNow() }
+            }
             showHint = model.countdown.phase == .running
         }
-        .onChange(of: scenePhase) { model.sceneChanged($0) }
-        .onChange(of: model.countdown.phase) { phase in
+        .onChange(of: scenePhase) { _, phase in model.sceneChanged(phase) }
+        .onChange(of: model.countdown.phase) { oldPhase, phase in
             lastTouch = Date()
             if phase == .finished { completedCount += 1 }
+            if phase == .running && (oldPhase == .ready || oldPhase == .finished) {
+                showHint = true
+                playRitual()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIAccessibility.guidedAccessStatusDidChangeNotification)) { _ in
             model.isGuidedAccessActive = UIAccessibility.isGuidedAccessEnabled
@@ -103,6 +123,11 @@ struct TimerView: View {
         .sheet(isPresented: $showSkins) {
             SkinPicker(store: store, selectedID: $skinID)
         }
+        .sheet(isPresented: $showSettings) {
+            SettingsView(model: model, store: store, skinID: $skinID) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { guideStart = .welcome }
+            }
+        }
         .sheet(isPresented: $showTime) {
             TimePickerView(seconds: model.countdown.phase == .finished ? model.countdown.configuredSeconds : model.seconds) {
                 model.setSeconds($0)
@@ -115,7 +140,7 @@ struct TimerView: View {
     private var portraitLayout: some View {
         VStack(spacing: 0) {
             topBar(landscape: false)
-            SlatBars(lit: model.bars, stacked: true)
+            SlatBars(lit: ritualLit ?? model.bars, count: model.effectiveSlats, stacked: true)
                 .padding(.top, 12).padding(.bottom, 18)
             Rectangle().fill(skin.line).frame(height: 1.5)
             digits.frame(maxWidth: 560).padding(.top, 24)
@@ -128,7 +153,7 @@ struct TimerView: View {
         VStack(spacing: 4) {
             topBar(landscape: true)
             HStack(spacing: 24) {
-                SlatBars(lit: model.bars, stacked: false)
+                SlatBars(lit: ritualLit ?? model.bars, count: model.effectiveSlats, stacked: false)
                 Rectangle().fill(skin.line).frame(width: 1.5)
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
@@ -144,6 +169,13 @@ struct TimerView: View {
     private var digits: some View {
         Button { lastTouch = Date(); showTime = true } label: {
             SevenSegmentTime(text: model.timeText).opacity(blinkOpacity)
+                .overlay(alignment: .topLeading) {
+                    if model.isBreak {
+                        Text("休憩").font(.system(size: 13, weight: .bold)).padding(.horizontal, 8).padding(.vertical, 3)
+                            .foregroundStyle(skin.lcd).background(skin.ink, in: Capsule())
+                            .offset(y: -22)
+                    }
+                }
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel("時間を変更")
@@ -172,24 +204,11 @@ struct TimerView: View {
                 lastTouch = Date()
                 showSkins = true
             }
-            Menu {
-                Toggle(isOn: $model.dimScreen) { Label("計測中は画面を暗くする", systemImage: "moon") }
-                Toggle(isOn: $model.keepScreenOn) { Label("計測中は画面を消さない", systemImage: "sun.max") }
-                if model.notificationNotice != nil {
-                    Button { openNotificationSettings() } label: { Label("終了通知の設定", systemImage: "bell.badge") }
-                }
-                Button { showSkins = true } label: { Label("スキン", systemImage: "paintpalette") }
-                Button { guideStart = .welcome } label: { Label("はじめに", systemImage: "questionmark.circle") }
-            } label: {
-                Image(systemName: model.dimScreen ? "moon.fill" : "moon")
-                    .font(.system(size: 19)).frame(width: 44, height: 44)
-            } primaryAction: {
+            iconButton(model.dimScreen ? "moon.fill" : "moon", label: "画面を暗くする") {
                 lastTouch = Date()
                 model.dimScreen.toggle()
             }
-            .accessibilityLabel("画面を暗くする")
             .accessibilityValue(model.dimScreen ? "オン" : "オフ")
-            .accessibilityHint("長押しでその他の設定")
             if orientation.canForce {
                 iconButton(landscape ? "iphone" : "arrow.up.left.and.arrow.down.right",
                            label: landscape ? "縦向きに戻す" : "横向きにする") {
@@ -197,13 +216,47 @@ struct TimerView: View {
                     orientation.toggle(isLandscape: landscape)
                 }
             }
+            iconButton("gearshape", label: "設定") {
+                lastTouch = Date()
+                showSettings = true
+            }
         }
         .frame(minHeight: 48)
         .opacity(chromeHidden ? 0 : 1)
         .allowsHitTesting(!chromeHidden)
     }
 
+    @ViewBuilder
     private func controls(compact: Bool) -> some View {
+        if model.countdown.phase == .finished {
+            finishedControls(compact: compact)
+        } else {
+            timingControls(compact: compact)
+        }
+    }
+
+    /// Done or not, the only questions are: another round, or stop here.
+    private func finishedControls(compact: Bool) -> some View {
+        VStack(spacing: compact ? 10 : 14) {
+            Button { lastTouch = Date(); model.again() } label: {
+                Text("もう\(model.lastMinutes)分").font(.system(size: 18, weight: .bold))
+                    .frame(minWidth: 180, minHeight: compact ? 52 : 60)
+                    .padding(.horizontal, 12)
+                    .foregroundStyle(skin.lcd)
+                    .background(skin.ink, in: Capsule())
+            }
+            .buttonStyle(SoftPressStyle())
+            Button { lastTouch = Date(); model.reset(); showHint = false } label: {
+                Text("おしまい").font(.system(size: 16, weight: .semibold))
+                    .frame(minWidth: 140, minHeight: 44)
+                    .overlay(Capsule().stroke(skin.line, lineWidth: 1.5))
+            }
+            .buttonStyle(SoftPressStyle())
+        }
+        .frame(minHeight: compact ? 120 : 138)
+    }
+
+    private func timingControls(compact: Bool) -> some View {
         VStack(spacing: compact ? 12 : 18) {
             HStack(spacing: 12) {
                 increment(1)
@@ -247,9 +300,22 @@ struct TimerView: View {
     private func primaryAction() {
         lastTouch = Date()
         switch model.countdown.phase {
-        case .ready, .finished: model.start(); showHint = true
+        case .ready, .finished: model.start()
         case .running: model.pause()
         case .paused: model.resume(); showHint = true
+        }
+    }
+
+    /// The slats fill up once before draining: a small "here we go".
+    private func playRitual() {
+        guard !reduceMotion else { return }
+        let total = model.effectiveSlats
+        Task { @MainActor in
+            for step in stride(from: 0, through: total, by: max(1, total / 15)) {
+                ritualLit = step
+                try? await Task.sleep(nanoseconds: 35_000_000)
+            }
+            ritualLit = nil
         }
     }
 
@@ -325,17 +391,18 @@ struct LockChip: View {
 struct SlatBars: View {
     @Environment(\.skin) private var skin
     let lit: Int
+    var count = Countdown.slats
     let stacked: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geometry in
             let length = stacked ? geometry.size.height : geometry.size.width
-            let spacing = max(2, min(8, length / CGFloat(Countdown.slats) * 0.3))
+            let spacing = max(1, min(8, length / CGFloat(count) * 0.3))
             let layout = stacked ? AnyLayout(VStackLayout(spacing: spacing)) : AnyLayout(HStackLayout(spacing: spacing))
             layout {
-                ForEach(0..<Countdown.slats, id: \.self) { index in
-                    let fromStart = stacked ? Countdown.slats - 1 - index : index
+                ForEach(0..<count, id: \.self) { index in
+                    let fromStart = stacked ? count - 1 - index : index
                     RoundedRectangle(cornerRadius: 1)
                         .fill(fromStart < lit ? skin.ink : skin.ghost)
                 }

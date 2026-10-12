@@ -119,4 +119,41 @@ final class ScreenshotTests: XCTestCase {
             paid.terminate()
         }
     }
+
+    func testFinishAndSettings() {
+        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyDemoSeconds", "3"])
+        XCTAssertTrue(app.buttons["開始"].waitForExistence(timeout: 10))
+        app.buttons["開始"].tap()
+        sleep(1)
+        touchBars(app)
+        XCTAssertTrue(app.buttons["おしまい"].waitForExistence(timeout: 10))
+        sleep(1)
+        shot("15-finished")
+        app.buttons["おしまい"].tap()
+
+        app.buttons["設定"].tap()
+        sleep(2)
+        shot("16-settings")
+        if app.buttons["Thirty+ でできること"].waitForExistence(timeout: 3) {
+            app.buttons["Thirty+ でできること"].tap()
+            sleep(2)
+            shot("17-thirty-plus")
+        }
+    }
+
+    func testLiveActivity() {
+        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "amber"])
+        XCTAssertTrue(app.buttons["開始"].waitForExistence(timeout: 10))
+        app.buttons["開始"].tap()
+        sleep(1)
+        touchBars(app)
+        sleep(2)
+        XCUIDevice.shared.press(.home)
+        sleep(3)
+        shot("18-dynamic-island")
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.03)).press(forDuration: 1.2)
+        sleep(2)
+        shot("19-dynamic-island-expanded")
+    }
 }

@@ -39,9 +39,9 @@ struct Countdown: Codable, Equatable {
     }
 
     func seconds(at now: Date) -> Int { Int(ceil(remaining(at: now))) }
-    func bars(at now: Date) -> Int {
+    func bars(at now: Date, slats: Int = Countdown.slats) -> Int {
         guard configuredSeconds > 0 else { return 0 }
-        return Int(ceil(remaining(at: now) / Double(configuredSeconds) * Double(Self.slats)))
+        return Int(ceil(remaining(at: now) / Double(configuredSeconds) * Double(slats)))
     }
 
     mutating func start(at now: Date) {

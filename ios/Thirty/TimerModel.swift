@@ -17,6 +17,37 @@ final class TimerModel: ObservableObject {
             updateDisplay()
         }
     }
+    /// Covering the proximity sensor (lying face down) turns the screen off.
+    @Published var faceDownScreenOff: Bool {
+        didSet { defaults.set(faceDownScreenOff, forKey: "faceDownScreenOff"); updateDisplay() }
+    }
+    @Published var startOnLaunch: Bool {
+        didSet { defaults.set(startOnLaunch, forKey: "startOnLaunch") }
+    }
+    // Thirty+ settings. They are stored as chosen and only take effect with Thirty+.
+    @Published var endSound: EndSound {
+        didSet { defaults.set(endSound.rawValue, forKey: "endSound"); syncNotification(requestPermission: false) }
+    }
+    @Published var cycleEnabled: Bool {
+        didSet { defaults.set(cycleEnabled, forKey: "cycleEnabled"); if !cycleEnabled { endBreak() } }
+    }
+    @Published var breakMinutes: Int {
+        didSet { defaults.set(breakMinutes, forKey: "breakMinutes") }
+    }
+    @Published var slatCount: Int {
+        didSet { defaults.set(slatCount, forKey: "slatCount") }
+    }
+    @Published var showSeconds: Bool {
+        didSet { defaults.set(showSeconds, forKey: "showSeconds") }
+    }
+    @Published var liveActivityEnabled: Bool {
+        didSet { defaults.set(liveActivityEnabled, forKey: "liveActivityEnabled"); syncActivity() }
+    }
+    @Published var hasPlus = false {
+        didSet { if oldValue != hasPlus { syncNotification(requestPermission: false); syncActivity() } }
+    }
+    /// The break between rounds when the cycle is on.
+    @Published private(set) var isBreak: Bool
 
     private let defaults: UserDefaults
     private let storageKey = "countdown.v1"
@@ -26,17 +57,38 @@ final class TimerModel: ObservableObject {
     private var revision = 0
     private var isActive = false
     private let effects = TimerEffects()
+    private let activity = LiveActivityController()
+    /// The focus duration to come back to after a break.
+    private var workSeconds: Int
+
+    /// Intents and quick actions reach the running timer through this instance.
+    static let shared = TimerModel()
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.keepScreenOn = defaults.object(forKey: "keepScreenOn") as? Bool ?? true
         self.dimScreen = defaults.bool(forKey: "dimScreen")
+        self.faceDownScreenOff = defaults.object(forKey: "faceDownScreenOff") as? Bool ?? true
+        self.startOnLaunch = defaults.bool(forKey: "startOnLaunch")
+        self.endSound = EndSound(rawValue: defaults.string(forKey: "endSound") ?? "") ?? .chime
+        self.cycleEnabled = defaults.bool(forKey: "cycleEnabled")
+        self.breakMinutes = defaults.object(forKey: "breakMinutes") as? Int ?? 5
+        self.slatCount = defaults.integer(forKey: "slatCount") == 60 ? 60 : 30
+        self.showSeconds = defaults.object(forKey: "showSeconds") as? Bool ?? true
+        self.liveActivityEnabled = defaults.object(forKey: "liveActivityEnabled") as? Bool ?? true
+        self.isBreak = defaults.bool(forKey: "isBreak")
+        self.workSeconds = defaults.object(forKey: "workSeconds") as? Int ?? Countdown.defaultSeconds
         if let data = defaults.data(forKey: storageKey),
            let saved = try? JSONDecoder().decode(Countdown.self, from: data) {
             countdown = saved
         } else {
             countdown = Countdown()
         }
+        #if DEBUG
+        // UI tests pass -ThirtyDemoSeconds 3 to reach the finished screen quickly.
+        let demoSeconds = defaults.integer(forKey: "ThirtyDemoSeconds")
+        if demoSeconds > 0 { countdown.setSeconds(demoSeconds, at: now) }
+        #endif
         countdown.refresh(at: now)
         persist()
         // Recover request IDs from a previous process so a reset can cancel them.
@@ -50,8 +102,16 @@ final class TimerModel: ObservableObject {
     }
 
     var seconds: Int { countdown.seconds(at: now) }
-    var bars: Int { countdown.bars(at: now) }
-    var timeText: String { String(format: "%02d:%02d", seconds / 60, seconds % 60) }
+    var effectiveSlats: Int { hasPlus ? slatCount : Countdown.slats }
+    var bars: Int { countdown.bars(at: now, slats: effectiveSlats) }
+    /// Minutes only rounds up, so 29:59 still reads 30 and the last seconds read 1.
+    var timeText: String {
+        if !hasPlus || showSeconds { return String(format: "%02d:%02d", seconds / 60, seconds % 60) }
+        return String(format: "%02d", Int(ceil(Double(seconds) / 60)))
+    }
+    var lastMinutes: Int { max(1, Int(ceil(Double(isBreak ? workSeconds : countdown.configuredSeconds) / 60))) }
+    private var cycleActive: Bool { hasPlus && cycleEnabled }
+    private var sound: EndSound { hasPlus ? endSound : .chime }
     var remainingLabel: String { "残り\(seconds / 60)分\(seconds % 60)秒" }
 
     func tick(at date: Date = Date(), announceCompletion: Bool = true) {
@@ -61,11 +121,58 @@ final class TimerModel: ObservableObject {
         if previous != countdown.phase {
             persist()
             updateDisplay()
+            syncActivity()
             if isActive && announceCompletion {
-                effects.playAlarm()
+                effects.playAlarm(sound)
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
+                // Rounds chain only while the app is open; a session that ended in
+                // the background just shows as finished on return.
+                if countdown.phase == .finished && cycleActive { nextRound() }
             }
         }
+    }
+
+    /// Focus → break → focus, until the stop button.
+    private func nextRound() {
+        if isBreak {
+            setBreak(false)
+            countdown.setSeconds(workSeconds, at: now)
+        } else {
+            workSeconds = countdown.configuredSeconds
+            defaults.set(workSeconds, forKey: "workSeconds")
+            setBreak(true)
+            countdown.setSeconds(max(1, breakMinutes) * 60, at: now)
+        }
+        countdown.start(at: now)
+        changed(requestPermission: false)
+    }
+
+    private func setBreak(_ value: Bool) {
+        isBreak = value
+        defaults.set(value, forKey: "isBreak")
+    }
+
+    private func endBreak() {
+        guard isBreak else { return }
+        setBreak(false)
+        countdown.setSeconds(workSeconds, at: Date())
+        countdown.reset()
+        changed()
+    }
+
+    /// From an intent, quick action, widget or launch: start unless already timing.
+    func startNow(minutes: Int? = nil) {
+        tick(announceCompletion: false)
+        guard countdown.phase != .running else { return }
+        if let minutes { setSeconds(minutes * 60) }
+        if countdown.configuredSeconds == 0 { setSeconds(Countdown.defaultSeconds) }
+        start()
+    }
+
+    /// "One more" on the finished screen repeats the last focus duration.
+    func again() {
+        if isBreak { endBreak() }
+        start()
     }
 
     func start() {
@@ -92,6 +199,10 @@ final class TimerModel: ObservableObject {
 
     func reset() {
         effects.stopAlarm()
+        if isBreak {
+            setBreak(false)
+            countdown.setSeconds(workSeconds, at: Date())
+        }
         countdown.reset()
         now = Date()
         notificationNotice = nil
@@ -125,6 +236,12 @@ final class TimerModel: ObservableObject {
         persist()
         updateDisplay()
         syncNotification(requestPermission: requestPermission)
+        syncActivity()
+    }
+
+    private func syncActivity() {
+        activity.sync(countdown: countdown, at: now, enabled: hasPlus && liveActivityEnabled,
+                      skinID: defaults.string(forKey: "skin") ?? "classic", slats: effectiveSlats, isBreak: isBreak)
     }
 
     private func persist() {
@@ -135,6 +252,7 @@ final class TimerModel: ObservableObject {
 
     private func updateDisplay() {
         UIApplication.shared.isIdleTimerDisabled = isActive && keepScreenOn && countdown.phase == .running
+        UIDevice.current.isProximityMonitoringEnabled = isActive && faceDownScreenOff && countdown.phase == .running
         let timing = countdown.phase == .running || countdown.phase == .paused
         effects.setDimmed(isActive && dimScreen && timing)
     }
@@ -165,9 +283,9 @@ final class TimerModel: ObservableObject {
             let interval = deadline.timeIntervalSinceNow
             guard interval > 0 else { self.tick(); return }
             let content = UNMutableNotificationContent()
-            content.title = "タイマー"
+            content.title = self.isBreak ? "休憩おわり" : "タイマー"
             content.body = "終了"
-            content.sound = UNNotificationSound(named: UNNotificationSoundName("alarm.wav"))
+            content.sound = self.sound.fileName.map { UNNotificationSound(named: UNNotificationSoundName($0)) }
             // Every revision has its own ID, including across process restarts.
             let requestID = self.notificationPrefix + UUID().uuidString
             self.ownPendingIDs.insert(requestID)

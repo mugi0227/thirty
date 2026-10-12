@@ -89,28 +89,9 @@ struct SkinPicker: View {
     private var plusCard: some View {
         VStack(spacing: 12) {
             Text("Thirty+").font(.title3.weight(.bold))
-            Text("すべてのスキンが使えます。\n買い切りで、定期購入ではありません。")
+            Text("すべてのスキンのほか、ロック画面での表示や終了音も選べます。")
                 .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            Button {
-                Task {
-                    await store.purchase()
-                    if store.hasPlus { selectedID = previewID }
-                }
-            } label: {
-                Group {
-                    if store.isBusy { ProgressView() } else { Text(store.product == nil ? "Thirty+ を購入" : "\(store.priceText)で購入").font(.headline) }
-                }
-                .frame(maxWidth: .infinity, minHeight: 52)
-                .foregroundStyle(TimerTheme.onAccent)
-                .background(TimerTheme.accent, in: Capsule())
-            }
-            .buttonStyle(SoftPressStyle())
-            .disabled(store.isBusy)
-            Button("購入を復元") { Task { await store.restore() } }
-                .font(.footnote).frame(minHeight: 44).disabled(store.isBusy)
-            if let message = store.message {
-                Text(message).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            }
+            PlusBuyButtons(store: store) { selectedID = previewID }
         }
         .padding(20)
         .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
