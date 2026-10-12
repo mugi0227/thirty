@@ -28,6 +28,15 @@ struct ThirtyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var model = TimerModel()
 
+    init() {
+        #if DEBUG
+        // UI tests pass -ThirtyResetState YES to start from a fresh install.
+        if UserDefaults.standard.bool(forKey: "ThirtyResetState"), let domain = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+        }
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup { TimerView(model: model) }
     }

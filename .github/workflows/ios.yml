@@ -6,7 +6,7 @@ permissions:
 jobs:
   build:
     runs-on: macos-15
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
@@ -31,4 +31,76 @@ jobs:
           path: |
             build/*.ipa
             build/*.verification.json
+          retention-days: 14
+
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          xcodebuild -version
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          phones = sorted((runtime, d["name"], d["udid"]) for runtime, items in devices.items() if "iOS" in runtime for d in items if d["name"].startswith("iPhone"))
+          exact = [p for p in phones if p[1] == "iPhone 16"]
+          print((exact or phones)[-1][2])')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices | grep "$UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+      - name: Build for testing
+        working-directory: ios
+        run: |
+          set +e
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
+            CODE_SIGNING_ALLOWED=NO build-for-testing > ../xcodebuild-build.log 2>&1
+          status=$?
+          grep -E "error:|BUILD (SUCCEEDED|FAILED)|TEST BUILD" ../xcodebuild-build.log | sort -u | head -80
+          exit $status
+      - name: Screenshots (light)
+        working-directory: ios
+        run: |
+          mkdir -p ../screenshots
+          export TEST_RUNNER_SCREENSHOT_DIR="$PWD/../screenshots" TEST_RUNNER_SCREENSHOT_PREFIX="light-"
+          xcrun simctl ui "${{ steps.sim.outputs.udid }}" appearance light
+          set +e
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
+            CODE_SIGNING_ALLOWED=NO test-without-building > ../xcodebuild-test-light.log 2>&1
+          status=$?
+          grep -E "Test Case|error|failed|TEST" ../xcodebuild-test-light.log | tail -60
+          exit $status
+      - name: Screenshots (dark)
+        if: always()
+        working-directory: ios
+        run: |
+          export TEST_RUNNER_SCREENSHOT_DIR="$PWD/../screenshots" TEST_RUNNER_SCREENSHOT_PREFIX="dark-"
+          xcrun simctl ui "${{ steps.sim.outputs.udid }}" appearance dark
+          set +e
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
+            CODE_SIGNING_ALLOWED=NO test-without-building > ../xcodebuild-test-dark.log 2>&1
+          status=$?
+          grep -E "Test Case|error|failed|TEST" ../xcodebuild-test-dark.log | tail -60
+          exit $status
+      - name: List screenshots
+        if: always()
+        run: ls -la screenshots || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Thirty-simulator-screenshots
+          path: |
+            screenshots/
+            xcodebuild-*.log
           retention-days: 14

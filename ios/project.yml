@@ -10,7 +10,37 @@ settings:
     MARKETING_VERSION: '0.3.0'
     CURRENT_PROJECT_VERSION: '3'
     CODE_SIGNING_ALLOWED: NO
+fileGroups:
+  - Thirty.storekit
+schemes:
+  Thirty:
+    build:
+      targets:
+        Thirty: all
+        ThirtyUITests: [test]
+    run:
+      config: Debug
+      storeKitConfiguration: Thirty.storekit
+    test:
+      config: Debug
+      targets:
+        - ThirtyUITests
+    archive:
+      config: Release
 targets:
+  ThirtyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - UITests
+    dependencies:
+      - target: Thirty
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.mugilab.thirty.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Thirty
+        TARGETED_DEVICE_FAMILY: '1,2'
   Thirty:
     type: application
     platform: iOS
