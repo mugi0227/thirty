@@ -159,22 +159,27 @@ jobs:
         working-directory: ios
         run: |
           mkdir -p ../video
-          xcrun simctl io "${{ steps.sim.outputs.udid }}" recordVideo --codec h264 --force ../video/raw.mov &
-          RECORDER=$!
-          python3 -c 'import time; print(time.time())' > ../video/record-start.txt
-          TEST_RUNNER_SCREENSHOT_DIR="$PWD/../video" \
+          V="$PWD/../video"
+          TEST_RUNNER_SCREENSHOT_DIR="$V" \
           xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
             -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
             -only-testing:ThirtyUITests/StoreScreenshotTests/testPreviewVideo \
-            CODE_SIGNING_ALLOWED=NO test-without-building > ../video/test.log 2>&1 || status=$?
+            CODE_SIGNING_ALLOWED=NO test-without-building > "$V/test.log" 2>&1 &
+          TEST=$!
+          for i in $(seq 1 600); do [ -f "$V/app-ready" ] && break; sleep 0.2; done
+          xcrun simctl io "${{ steps.sim.outputs.udid }}" recordVideo --codec h264 --force "$V/raw.mov" 2> "$V/recorder.log" &
+          RECORDER=$!
+          for i in $(seq 1 100); do grep -q "Recording started" "$V/recorder.log" && break; sleep 0.1; done
+          touch "$V/recording-ready"
+          for i in $(seq 1 600); do [ -f "$V/done" ] && break; sleep 0.2; done
           kill -INT $RECORDER; wait $RECORDER || true
-          grep -E "Test Case.*(passed|failed)" ../video/test.log
-          exit ${status:-0}
+          wait $TEST; status=$?
+          grep -E "Test Case.*(passed|failed)" "$V/test.log"
+          exit $status
       - name: Encode App Preview (886x1920, 30 fps, H.264, stereo AAC)
         run: |
-          OFFSET=$(python3 -c 'print(max(0.0, float(open("video/video-start.txt").read()) - float(open("video/record-start.txt").read())))')
-          ffmpeg -y -ss "$OFFSET" -i video/raw.mov -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=48000 \
-            -t 27 -vf "scale=886:-2,crop=886:1920,fps=30,format=yuv420p" \
+          ffmpeg -y -i video/raw.mov -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=48000 \
+            -t 30 -vf "scale=886:-2,crop=886:1920,fps=30,format=yuv420p" \
             -c:v libx264 -profile:v high -level 4.0 -b:v 10M -maxrate 12M -bufsize 20M \
             -c:a aac -b:a 256k -ar 48000 -ac 2 -shortest -movflags +faststart video/app-preview-iphone.mp4
           ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,channels -show_entries format=duration video/app-preview-iphone.mp4

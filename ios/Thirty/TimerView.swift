@@ -37,6 +37,14 @@ struct TimerView: View {
     /// Slats lit during the short fill-up that marks a start.
     @State private var ritualLit: Int?
     private static var launched = false
+    /// Screenshot runs keep the finished digits steady.
+    private static var noBlink: Bool {
+        #if DEBUG
+        return UserDefaults.standard.bool(forKey: "ThirtyNoBlink")
+        #else
+        return false
+        #endif
+    }
     @State private var guideStart: OnboardingGuide.Page?
     @State private var showTime = false
     @State private var showHint = false
@@ -184,7 +192,7 @@ struct TimerView: View {
 
     /// LCD-style blink when finished, and a slower one while paused.
     private var blinkOpacity: Double {
-        guard !reduceMotion else { return model.countdown.phase == .paused ? 0.5 : 1 }
+        guard !reduceMotion && !Self.noBlink else { return model.countdown.phase == .paused ? 0.5 : 1 }
         let halfSeconds = Int(Date().timeIntervalSinceReferenceDate * 2)
         switch model.countdown.phase {
         case .finished: return halfSeconds % 2 == 0 ? 1 : 0.15

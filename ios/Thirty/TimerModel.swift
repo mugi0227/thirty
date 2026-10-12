@@ -8,11 +8,18 @@ enum AppClock {
     #if DEBUG
     private static let scale = max(1, UserDefaults.standard.double(forKey: "ThirtyTimeScale"))
     private static let origin = Date()
+    /// Screenshot runs pass -ThirtyJumpAfterStart 450 to land mid-session at a fixed time.
+    private static var offset: TimeInterval = 0
     static func now() -> Date {
-        scale == 1 ? Date() : origin.addingTimeInterval(Date().timeIntervalSince(origin) * scale)
+        let real = scale == 1 ? Date() : origin.addingTimeInterval(Date().timeIntervalSince(origin) * scale)
+        return real.addingTimeInterval(offset)
+    }
+    static func didStart() {
+        offset += UserDefaults.standard.double(forKey: "ThirtyJumpAfterStart")
     }
     #else
     static func now() -> Date { Date() }
+    static func didStart() {}
     #endif
 }
 
@@ -194,6 +201,8 @@ final class TimerModel: ObservableObject {
         now = AppClock.now()
         effects.stopAlarm()
         countdown.start(at: now)
+        AppClock.didStart()
+        now = AppClock.now()
         notificationNotice = nil
         changed(requestPermission: true)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()

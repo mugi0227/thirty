@@ -4,7 +4,7 @@ import XCTest
 /// scripts/make_store_screenshots.py adds the captions.
 final class StoreScreenshotTests: XCTestCase {
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
-    private let base = ["-AppleLanguages", "(ja)", "-AppleLocale", "ja_JP", "-ThirtyResetState", "YES", "-ThirtyNoPrompt", "YES"]
+    private let base = ["-AppleLanguages", "(ja)", "-AppleLocale", "ja_JP", "-ThirtyResetState", "YES", "-ThirtyNoPrompt", "YES", "-ThirtyNoBlink", "YES"]
 
     override func setUp() {
         continueAfterFailure = false
@@ -36,9 +36,9 @@ final class StoreScreenshotTests: XCTestCase {
     }
 
     func test1Running() {
-        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyTimeScale", "150"])
+        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyJumpAfterStart", "450"])
         startRunning(app)
-        sleep(5) // controls step aside; about twelve minutes have run
+        sleep(5) // controls step aside, about 22 minutes left
         shot("01-running")
         XCUIDevice.shared.orientation = .landscapeLeft
         sleep(3)
@@ -64,7 +64,7 @@ final class StoreScreenshotTests: XCTestCase {
     }
 
     func test4Skin() {
-        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "night", "-ThirtyTimeScale", "150"])
+        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "night", "-ThirtyJumpAfterStart", "1080"])
         startRunning(app)
         sleep(6)
         shot("05-skin-night")
@@ -80,7 +80,7 @@ final class StoreScreenshotTests: XCTestCase {
             sleep(2)
             shot("06-skins")
         } else {
-            let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "amber"])
+            let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "amber", "-ThirtyJumpAfterStart", "300"])
             startRunning(app)
             sleep(2)
             XCUIDevice.shared.press(.home)
@@ -94,18 +94,23 @@ final class StoreScreenshotTests: XCTestCase {
 
     /// About 25 seconds, recorded by CI with `simctl io recordVideo`:
     /// ready → start (fill-up) → controls step aside while draining → finish.
-    /// Portrait only: a recording keeps the panel's portrait frame.
-    func testPreviewVideo() {
-        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyTimeScale", "100"])
+    /// The test and the recorder hand over through files in SCREENSHOT_DIR so
+    /// the recording starts on the ready screen and stops on the finish screen.
+    func testPreviewVideo() throws {
+        let directory = try XCTUnwrap(ProcessInfo.processInfo.environment["SCREENSHOT_DIR"])
+        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyTimeScale", "100", "-ThirtyNoBlink", "NO"])
         XCTAssertTrue(app.buttons["開始"].waitForExistence(timeout: 10))
-        if let directory = ProcessInfo.processInfo.environment["SCREENSHOT_DIR"] {
-            let stamp = String(Date().timeIntervalSince1970)
-            try? stamp.write(toFile: directory + "/video-start.txt", atomically: true, encoding: .utf8)
+        FileManager.default.createFile(atPath: directory + "/app-ready", contents: nil)
+        let deadline = Date().addingTimeInterval(90)
+        while !FileManager.default.fileExists(atPath: directory + "/recording-ready") && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.2)
         }
         sleep(2)
         app.buttons["開始"].tap()
         closeHint(app)
-        XCTAssertTrue(app.buttons["おしまい"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.buttons["おしまい"].waitForExistence(timeout: 40))
         sleep(4)
+        FileManager.default.createFile(atPath: directory + "/done", contents: nil)
+        sleep(3)
     }
 }
