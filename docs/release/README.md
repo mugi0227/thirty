@@ -7,8 +7,8 @@
 
 | もの | 場所 | 状態 |
 | --- | --- | --- |
-| App Storeのスクリーンショット（キャプション付き） | GitHub Actionsの成果物 `store-iphone-medium` / `store-iphone-large` / `store-ipad-13`、[images](images/) | CIで撮影 |
-| App プレビュー動画（886×1920、30fps、H.264、約28秒。デバッグ版で時間を100倍に早送り） | 成果物 `app-preview-video`、[images](images/) | CIで録画 |
+| App Storeのスクリーンショット（キャプション付き） | [store/iphone-medium](store/iphone-medium/)（1206×2622、必須）、[store/iphone-large](store/iphone-large/)（1320×2868）、[store/ipad-13](store/ipad-13/)（2064×2752、必須）。CIの成果物 `store-*` からも取得可 | 撮影済み |
+| App プレビュー動画（886×1920、30fps、H.264、約28秒。デバッグ版で時間を100倍に早送り） | [store/app-preview-iphone-6.9.mp4](store/app-preview-iphone-6.9.mp4) | 録画済み |
 | 説明文、キーワード、サブタイトルなど | [metadata-ja.md](metadata-ja.md) | 下書き済み |
 | プライバシーポリシー | [privacy-policy.md](privacy-policy.md) | 下書き済み |
 | サポートページ | [support.md](support.md) | 下書き済み |
