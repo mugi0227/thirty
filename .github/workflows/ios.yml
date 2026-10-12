@@ -197,27 +197,33 @@ jobs:
     # the iOS 27.1 SDK. The Xcode 27 image ships an iPhone Duo simulator.
     runs-on: xcode-27
     continue-on-error: true
-    timeout-minutes: 75
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - run: brew install xcodegen && python3 -m pip install --break-system-packages pillow
-      - name: Use the newest Xcode 27 and an iOS runtime that supports iPhone Duo
+      - name: Look for an iOS runtime that can run iPhone Duo
+        id: duo
         run: |
+          # On 2026-10-12 the image has the iPhone Duo device type, but no
+          # installed or downloadable runtime (27.0, 27.2) accepts it.
           XCODE=$(ls -d /Applications/Xcode_27.[0-9].app | sort -V | tail -1)
           sudo xcode-select -s "$XCODE"
           xcodebuild -version
-          TYPE=com.apple.CoreSimulator.SimDeviceType.iPhone-Duo
-          if ! xcrun simctl list runtimes -j | python3 -c 'import json,sys; t=sys.argv[1]; sys.exit(0 if any(any(d.get("identifier")==t for d in r.get("supportedDeviceTypes",[])) for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable")) else 1)' "$TYPE"; then
-            echo "Downloading the iOS platform for $XCODE"
-            xcodebuild -downloadPlatform iOS
+          if xcrun simctl list runtimes -j | python3 -c 'import json,sys; t="com.apple.CoreSimulator.SimDeviceType.iPhone-Duo"; sys.exit(0 if any(any(d.get("identifier")==t for d in r.get("supportedDeviceTypes",[])) for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable")) else 1)'; then
+            echo "supported=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No simulator runtime supports iPhone Duo yet; skipping Duo screenshots (not required before April 2027)."
+            echo "supported=false" >> "$GITHUB_OUTPUT"
           fi
-          xcrun simctl list runtimes | grep -i ios
-      - working-directory: ios
+      - if: steps.duo.outputs.supported == 'true'
+        working-directory: ios
         run: xcodegen generate
       - name: Boot iPhone Duo
+        if: steps.duo.outputs.supported == 'true'
         id: sim
         run: echo "udid=$(scripts/ci/boot_sim.sh 'iPhone Duo' | tail -1)" >> "$GITHUB_OUTPUT"
       - name: Capture
+        if: steps.duo.outputs.supported == 'true'
         working-directory: ios
         run: |
           mkdir -p ../raw
@@ -231,9 +237,10 @@ jobs:
           python3 -c "from PIL import Image; import glob; [print(f, Image.open(f).size) for f in sorted(glob.glob('../raw/*.png'))]"
           exit $status
       - name: Add captions
+        if: steps.duo.outputs.supported == 'true'
         run: scripts/fetch_fonts.sh && python3 scripts/make_store_screenshots.py raw store/iphone-duo
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: steps.duo.outputs.supported == 'true'
         with:
           name: store-iphone-duo
           path: |
