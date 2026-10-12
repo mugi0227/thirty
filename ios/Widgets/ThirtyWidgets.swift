@@ -108,13 +108,13 @@ struct TimerLiveActivity: Widget {
             let ink = LCDPalette.colors(for: context.attributes.skinID).ink
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 10) {
-                        ActivityTime(state: context.state).font(.system(size: 40, weight: .light, design: .monospaced))
+                    HStack(spacing: 14) {
+                        ActivitySlats(state: context.state, ink: ink).frame(height: 44)
+                        ActivityTime(state: context.state).font(.system(size: 30, weight: .light, design: .monospaced))
                             .foregroundStyle(ink)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                        ActivityProgress(state: context.state, ink: ink)
+                            .frame(width: 104, alignment: .trailing)
                     }
-                    .padding(.horizontal, 10).padding(.bottom, 6)
+                    .padding(.horizontal, 8).padding(.bottom, 4)
                 }
             } compactLeading: {
                 Image(systemName: context.state.isBreak ? "cup.and.saucer.fill" : "timer").foregroundStyle(ink)
@@ -130,45 +130,75 @@ struct TimerLiveActivity: Widget {
 }
 
 /// Lock Screen and StandBy: the same bars-and-digits layout as the app.
+/// Lock Screen and StandBy: the same bars-and-digits layout as the app.
 struct LockScreenTimer: View {
     let context: ActivityViewContext<TimerActivityAttributes>
 
     var body: some View {
         let colors = LCDPalette.colors(for: context.attributes.skinID)
-        VStack(spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                Label(context.state.isBreak ? "休憩" : context.state.deadline == nil ? "一時停止" : "Thirty",
-                      systemImage: context.state.isBreak ? "cup.and.saucer.fill" : "timer")
-                    .font(.caption.weight(.semibold))
-                Spacer()
-                ActivityTime(state: context.state).font(.system(size: 44, weight: .light, design: .monospaced))
+        HStack(spacing: 14) {
+            ActivitySlats(state: context.state, ink: colors.ink)
+            Rectangle().fill(colors.ink.opacity(0.16)).frame(width: 1.5)
+            VStack(alignment: .trailing, spacing: 2) {
+                if context.state.isBreak {
+                    Text("休憩").font(.caption.weight(.semibold))
+                } else if context.state.deadline == nil {
+                    Text("一時停止").font(.caption.weight(.semibold))
+                }
+                ActivityTime(state: context.state).font(.system(size: 36, weight: .light, design: .monospaced))
             }
-            ActivityProgress(state: context.state, ink: colors.ink)
+            .frame(width: 124, alignment: .trailing)
         }
         .foregroundStyle(colors.ink)
-        .padding(.horizontal, 18).padding(.vertical, 14)
+        .padding(16)
+        .frame(height: 104)
     }
 }
 
-/// The system animates a timer ProgressView without any updates from the
-/// app, so the Live Activity uses it as is: a thin bar that empties on time.
-struct ActivityProgress: View {
+/// Thirty slats that empty on their own, right to left, with no updates.
+///
+/// Each slat is a system timer ProgressView covering one thirtieth of the
+/// session, turned upright. Before its turn it reads full, during its turn
+/// it drains from the top, and afterwards it stays empty, so together they
+/// behave like the app's bar while the app is suspended.
+struct ActivitySlats: View {
     let state: TimerActivityAttributes.ContentState
     let ink: Color
+    private let count = 30
 
     var body: some View {
-        if let deadline = state.deadline {
-            ProgressView(timerInterval: deadline.addingTimeInterval(-state.total)...deadline, countsDown: true) {
+        GeometryReader { geometry in
+            let gap: CGFloat = 2
+            let width = max(1, (geometry.size.width - gap * CGFloat(count - 1)) / CGFloat(count))
+            let height = geometry.size.height
+            HStack(spacing: gap) {
+                ForEach(0..<count, id: \.self) { index in
+                    slat(index, length: height)
+                        .frame(width: width, height: height)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func slat(_ index: Int, length: CGFloat) -> some View {
+        let share = state.total / Double(count)
+        if let deadline = state.deadline, share > 0 {
+            // Slat `index` (from the left) is lit while more than index × share remains.
+            let end = deadline.addingTimeInterval(-Double(index) * share)
+            ProgressView(timerInterval: end.addingTimeInterval(-share)...end, countsDown: true) {
                 EmptyView()
             } currentValueLabel: {
                 EmptyView()
             }
             .progressViewStyle(.linear)
             .tint(ink)
+            .frame(width: length)
+            .scaleEffect(x: 1, y: 2, anchor: .center)  // a little thicker than the system bar
+            .rotationEffect(.degrees(-90))
         } else {
-            ProgressView(value: state.total > 0 ? max(0, min(1, state.remaining / state.total)) : 0)
-                .progressViewStyle(.linear)
-                .tint(ink)
+            let lit = state.total > 0 ? Int(ceil(state.remaining / state.total * Double(count))) : 0
+            RoundedRectangle(cornerRadius: 1).fill(index < lit ? ink : ink.opacity(0.15))
         }
     }
 }
