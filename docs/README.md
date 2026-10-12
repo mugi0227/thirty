@@ -8,6 +8,6 @@
 | [要望と実装](requirements-and-implementation.md) | 最初の依頼からの変更、各要望に対応する動作とコード |
 | [構成と状態管理](architecture.md) | タイマーの状態、終了日時の保存、音と通知、減光の仕組み |
 | [画面設計](design.md) | スマホ全体を液晶にする設計、縦横のレイアウト、案内 |
-| [収益化の方針案](monetization.md) | 広告、買い切り、課金の比較と推奨 |
+| [収益化](monetization.md) | 無料・広告なし＋買い切りの Thirty+ に決めた理由と実装 |
 | [iOSの制約](ios-capabilities.md) | アクセスガイドの検知、設定操作、物理ボタン、明るさ |
 | [検証記録](verification.md) | ブラウザで確認した範囲、未実施のiOS検証、再実行方法 |

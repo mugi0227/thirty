@@ -27,7 +27,8 @@ v0.2.0では、見出し、説明、スローガン、ブランド名、時間�
 v0.3.0では、アプリ内に物理タイマーの絵を置く表現をやめ、スマホそのものをビジュアルバータイマーにする要望を受けました。
 縦向きは上段に棒、下段に数字、横向きは左に棒、右に数字です。
 動画アプリのような横向き切替ボタン、99分を超える時間、アクセスガイドが実行中でないときの案内とオンボーディングの見直しも同時に行いました。
-広告と課金は実装せず、方針案を[収益化の方針案](monetization.md)にまとめています。
+収益化は、提案した「無料・広告なし＋買い切りの Thirty+」に決まり、選べるスキンを Thirty+ の特典として実装しました。詳細は[収益化](monetization.md)です。
+あわせて、GitHub Actionsの標準のmacOSランナーで、Simulatorのビルドと撮影を行う依頼を受けました。
 
 ## 機能ごとの対応
 
@@ -53,6 +54,9 @@ v0.3.0では、アプリ内に物理タイマーの絵を置く表現をやめ�
 | 特に開始後にボタンの案内を出す | 開始と再開の後に表示し、実行中の検知、終了、手動で閉じる操作で消す | `TimerView.showHint` |
 | スマホ自体をタイマーにする | 縦は上下、横は左右に棒と数字を配置。計測中は4秒で操作を隠し、タップで戻す | `TimerView.portraitLayout`、`landscapeLayout`、`chromeHidden` |
 | 横向きにするボタン | iPhoneで向きを固定し、端末が同じ向きになったら自動回転に戻す | [Orientation.swift](../ios/Thirty/Orientation.swift) |
+| スキンを選べる | クラシックは無料、5種類は Thirty+。購入前に試着できる | [Skin.swift](../ios/Thirty/Skin.swift)、[SkinPicker.swift](../ios/Thirty/SkinPicker.swift) |
+| 買い切りの課金 | StoreKit 2の非消耗型。購入、復元、返金時のスキンの戻し | [Store.swift](../ios/Thirty/Store.swift) |
+| Macでのシミュレート | GitHub ActionsのmacOS 15で、UIテストが画面を操作して撮影する | [ios.yml](../.github/workflows/ios.yml)、[ScreenshotTests.swift](../ios/UITests/ScreenshotTests.swift) |
 | 省電力表示で画面を暗くする | 元の輝度を保存して計測中と一時停止中に減光し、終了、停止、アプリを離れる際に復元する | `TimerEffects.setDimmed`、`TimerModel.updateDisplay` |
 
 上表はソースにある実装の対応表です。

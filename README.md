@@ -14,7 +14,7 @@ v0.3.0からは、アプリの中にタイマーの絵を置くのではなく�
 | <img src="docs/images/timer.png" width="220" alt="上に30本の棒、下に27:26の液晶数字を表示した縦向きの画面"> | <img src="docs/images/timer-landscape.png" width="360" alt="左に棒、右に数字と操作を並べた横向きの画面"> | <img src="docs/images/timer-dark.png" width="220" alt="暗い配色の縦向きの画面"> |
 
 画像はブラウザの画面プレビューです。
-現在公開しているのはv0.3.0のソースとプレビューで、iOSのビルド、Simulator、実機での動作はまだ確認していません。
+v0.3.0は、GitHub ActionsのmacOSでビルドとSimulatorでの撮影を行っています。実機での動作はまだ確認していません。
 IPAやApp Store配布はありません。
 
 ## 操作
@@ -29,6 +29,7 @@ IPAやApp Store配布はありません。
 | 月のアイコン | タップで計測中の減光を切替。長押しで「画面を消さない」と通知設定 |
 | 回転のアイコン（iPhone） | 動画アプリのように横向き／縦向きへ切り替える。端末を同じ向きにすると自動回転に戻る |
 | ロック | アクセスガイドの設定手順を開く。実行中は「ロック中」と表示 |
+| パレットのアイコン | スキンを選ぶ。クラシック以外は Thirty+（買い切り）で使える |
 
 00:00では開始ボタンを無効にします。
 黒い棒30本は、設定時間に対する残り時間の割合を表します。縦向きでは上から、横向きでは右から減ります。
@@ -41,6 +42,7 @@ IPAやApp Store配布はありません。
 
 タイマーの動作にサーバー通信は使いません。
 アカウント、広告、外部のAIモデルは不要です。
+追加のスキンは買い切りの Thirty+ で、購入と復元のときだけApp Storeと通信します。
 Appleの説明ページを開く操作だけはブラウザを使用します。
 
 ## アクセスガイドとの組み合わせ
@@ -96,8 +98,8 @@ python3 scripts/package_ipa.py \
 
 生成されるIPAは未署名です。
 AltStoreなどで別途署名する想定で、表示名はASCIIの `Thirty`、Bundle IDは `jp.mugilab.thirty` にしています。
-[GitHub Actionsのビルド定義](.github/workflows/ios.yml)は手動実行専用で、Pushでは起動しません。
-これらのiOSビルド手順は、現時点では実行未確認です。
+[GitHub Actionsのビルド定義](.github/workflows/ios.yml)は、手動実行と `claude/` で始まるブランチへのPush（`ios/` の変更時）で起動します。
+macOS 15のランナーで、`swift test`、実機向けの未署名ビルドとIPA作成、SimulatorでのUIテストとスクリーンショット撮影（明るい配色と暗い配色）を行い、成果物として保存します。
 
 ## 要望と実装の記録
 
@@ -106,4 +108,4 @@ AltStoreなどで別途署名する想定で、表示名はASCIIの `Thirty`、B
 - [画面の設計](docs/design.md)
 - [iOSでできることと制約](docs/ios-capabilities.md)
 - [検証結果と再実行方法](docs/verification.md)
-- [収益化の方針案](docs/monetization.md)
+- [収益化（Thirty+）](docs/monetization.md)
