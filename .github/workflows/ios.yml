@@ -197,17 +197,26 @@ jobs:
     # the iOS 27.1 SDK. The Xcode 27 image ships an iPhone Duo simulator.
     runs-on: xcode-27
     continue-on-error: true
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - run: brew install xcodegen && python3 -m pip install --break-system-packages pillow
+      - name: Use the newest Xcode 27 and an iOS runtime that supports iPhone Duo
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_27.[0-9].app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+          TYPE=com.apple.CoreSimulator.SimDeviceType.iPhone-Duo
+          if ! xcrun simctl list runtimes -j | python3 -c 'import json,sys; t=sys.argv[1]; sys.exit(0 if any(any(d.get("identifier")==t for d in r.get("supportedDeviceTypes",[])) for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable")) else 1)' "$TYPE"; then
+            echo "Downloading the iOS platform for $XCODE"
+            xcodebuild -downloadPlatform iOS
+          fi
+          xcrun simctl list runtimes | grep -i ios
       - working-directory: ios
-        run: xcodebuild -version && xcodegen generate
+        run: xcodegen generate
       - name: Boot iPhone Duo
         id: sim
-        run: |
-          xcrun simctl help 2>&1 | grep -iE "fold|posture|hinge|display" || true
-          echo "udid=$(scripts/ci/boot_sim.sh 'iPhone Duo' | tail -1)" >> "$GITHUB_OUTPUT"
+        run: echo "udid=$(scripts/ci/boot_sim.sh 'iPhone Duo' | tail -1)" >> "$GITHUB_OUTPUT"
       - name: Capture
         working-directory: ios
         run: |
