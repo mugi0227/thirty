@@ -29,10 +29,10 @@ final class StoreScreenshotTests: XCTestCase {
         if close.waitForExistence(timeout: 2) { close.tap() }
     }
 
-    private func startRunning(_ app: XCUIApplication) {
+    private func startRunning(_ app: XCUIApplication, closingHint: Bool = true) {
         XCTAssertTrue(app.buttons["開始"].waitForExistence(timeout: 10))
         app.buttons["開始"].tap()
-        closeHint(app)
+        if closingHint { closeHint(app) }
     }
 
     func test1Running() {
@@ -57,7 +57,7 @@ final class StoreScreenshotTests: XCTestCase {
 
     func test3Finished() {
         let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyTimeScale", "900"])
-        startRunning(app)
+        startRunning(app, closingHint: false) // the hint leaves by itself at the end
         XCTAssertTrue(app.buttons["おしまい"].waitForExistence(timeout: 15))
         sleep(1)
         shot("04-finished")
@@ -89,6 +89,10 @@ final class StoreScreenshotTests: XCTestCase {
             springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.03)).press(forDuration: 1.2)
             sleep(2)
             shot("06-dynamic-island")
+            // Answer the one-time "Allow Live Activities" prompt if it shows.
+            for label in ["許可", "Allow"] where springboard.buttons[label].waitForExistence(timeout: 1) {
+                springboard.buttons[label].tap()
+            }
             // The Lock Screen shows the Live Activity without any home screen icons.
             let device = XCUIDevice.shared
             let lock = NSSelectorFromString("pressLockButton")

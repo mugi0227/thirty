@@ -77,6 +77,9 @@ def compose(raw_path, out_path):
     island = raw_path.stem == "06-dynamic-island"
     if island:
         raw = raw.crop((0, 0, width, int(height * 0.115)))
+    # The Lock Screen: the clock and the Live Activity, not the notifications below.
+    if raw_path.stem == "06-lock-screen":
+        raw = raw.crop((0, 0, width, int(height * 0.6)))
     title, subtitle = CAPTIONS[raw_path.stem]
     canvas = Image.new("RGB", (width, height), BACKGROUND)
     draw = ImageDraw.Draw(canvas)

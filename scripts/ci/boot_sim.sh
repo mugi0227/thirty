@@ -22,6 +22,12 @@ print((fits or runtimes)[-1]["identifier"])' "$TYPE")
 fi
 xcrun simctl boot "$UDID" >/dev/null 2>&1 || true
 xcrun simctl bootstatus "$UDID" -b >/dev/null
+# Japanese system UI (Lock Screen, alerts), then reboot so SpringBoard picks it up.
+xcrun simctl spawn "$UDID" defaults write -g AppleLanguages -array ja-JP
+xcrun simctl spawn "$UDID" defaults write -g AppleLocale ja_JP
+xcrun simctl shutdown "$UDID"
+xcrun simctl boot "$UDID"
+xcrun simctl bootstatus "$UDID" -b >/dev/null
 xcrun simctl ui "$UDID" appearance light
 xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
   --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 || true

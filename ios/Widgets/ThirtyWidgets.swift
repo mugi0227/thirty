@@ -109,7 +109,7 @@ struct TimerLiveActivity: Widget {
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 14) {
-                        ActivitySlats(state: context.state, slats: context.attributes.slats, ink: ink, gap: .black)
+                        ActivitySlats(state: context.state, slats: context.attributes.slats, ink: ink, gap: .black, rows: 10)
                             .frame(height: 40)
                         ActivityTime(state: context.state).font(.system(size: 30, weight: .light, design: .monospaced))
                             .foregroundStyle(ink)
@@ -162,17 +162,23 @@ struct ActivitySlats: View {
     let slats: Int
     let ink: Color
     let gap: Color
+    var rows = 16
 
     var body: some View {
         ZStack {
             Rectangle().fill(ink.opacity(0.12))
             if let deadline = state.deadline {
+                // A linear ProgressView is the only bar the system animates without
+                // updates, and it is thin, so several are stacked into one block.
                 let start = deadline.addingTimeInterval(-state.total)
-                ProgressView(timerInterval: start...deadline, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
-                    .progressViewStyle(.linear)
-                    .tint(ink)
-                    .scaleEffect(x: 1, y: 40, anchor: .center)
-                    .clipped()
+                VStack(spacing: 0) {
+                    ForEach(0..<rows, id: \.self) { _ in
+                        ProgressView(timerInterval: start...deadline, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
+                            .progressViewStyle(.linear)
+                            .tint(ink)
+                            .frame(maxHeight: .infinity)
+                    }
+                }
             } else {
                 GeometryReader { geometry in
                     let fraction = state.total > 0 ? max(0, min(1, state.remaining / state.total)) : 0
