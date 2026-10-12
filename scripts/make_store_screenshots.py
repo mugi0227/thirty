@@ -8,6 +8,7 @@ Island (medium display)" class, iPhone 17 Pro Max (1320x2868) the large
 class and iPad Pro 13-inch (2064x2752) the 13-inch iPad class.
 Runs on the macOS runner, which has Hiragino Sans.
 """
+import os
 import sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -18,25 +19,32 @@ CAPTIONS = {
     "03-guided-access": ("ほかのアプリに逃げられない", "iPhoneのアクセスガイドで画面を固定"),
     "04-finished": ("できても、できなくても", "終わったら「もう30分」か「おしまい」"),
     "05-skin-night": ("夜に映える、ナイトブルー", "6種類のスキンから選べます（Thirty+）"),
-    "06-dynamic-island": ("ロック画面でも、残りが見える", "Dynamic Island と StandBy に対応（Thirty+）"),
+    "06-dynamic-island": ("閉じても、残りが見える", "Dynamic Island と ロック画面、StandBy に対応（Thirty+）"),
+    "06-lock-screen": ("閉じても、残りが見える", "ロック画面、StandBy、Dynamic Island に対応（Thirty+）"),
     "06-skins": ("気分でスキンを選べる", "購入前に試着できます（Thirty+）"),
 }
 BACKGROUND = (184, 193, 170)
 INK = (28, 35, 29)
 
-FONT_CANDIDATES = {
-    "bold": ["/System/Library/Fonts/ヒラギノ角ゴシック W7.ttc", "/System/Library/Fonts/Hiragino Sans GB.ttc",
-             "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"],
-    "regular": ["/System/Library/Fonts/ヒラギノ角ゴシック W4.ttc", "/System/Library/Fonts/Hiragino Sans GB.ttc",
-                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"],
+# Japanese typefaces only: a Chinese fallback draws 置, 直 and others with
+# different strokes. Zen Kaku Gothic New / Zen Old Mincho (OFL) are fetched by
+# scripts/fetch_fonts.sh; Hiragino Sans is the fallback on macOS.
+FONT_DIR = Path(os.environ.get("STORE_FONT_DIR", Path(__file__).resolve().parent / "fonts"))
+STYLE = os.environ.get("STORE_FONT", "gothic")
+FONT_FILES = {
+    ("gothic", "bold"): ["ZenKakuGothicNew-Bold.ttf", "/System/Library/Fonts/ヒラギノ角ゴシック W7.ttc"],
+    ("gothic", "regular"): ["ZenKakuGothicNew-Medium.ttf", "/System/Library/Fonts/ヒラギノ角ゴシック W4.ttc"],
+    ("mincho", "bold"): ["ZenOldMincho-Bold.ttf", "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc"],
+    ("mincho", "regular"): ["ZenOldMincho-Regular.ttf", "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc"],
 }
 
 
 def font(kind, size):
-    for path in FONT_CANDIDATES[kind]:
-        if Path(path).exists():
-            return ImageFont.truetype(path, size)
-    raise SystemExit(f"No Japanese {kind} font found")
+    for name in FONT_FILES[(STYLE, kind)]:
+        path = Path(name) if name.startswith("/") else FONT_DIR / name
+        if path.exists():
+            return ImageFont.truetype(str(path), size)
+    raise SystemExit(f"No Japanese {STYLE} {kind} font; run scripts/fetch_fonts.sh")
 
 
 def fit(draw, text, kind, size, max_width):
@@ -64,6 +72,11 @@ def compose(raw_path, out_path):
     if "landscape" in raw_path.stem:
         raw = raw.rotate(90, expand=True)
         width, height = height, width
+    # Only the top of the Dynamic Island capture: the Simulator's home screen
+    # (with its test-runner icon) stays out of the picture.
+    island = raw_path.stem == "06-dynamic-island"
+    if island:
+        raw = raw.crop((0, 0, width, int(height * 0.115)))
     title, subtitle = CAPTIONS[raw_path.stem]
     canvas = Image.new("RGB", (width, height), BACKGROUND)
     draw = ImageDraw.Draw(canvas)
@@ -79,7 +92,7 @@ def compose(raw_path, out_path):
     max_w, max_h = width - 2 * margin, height - area_top - margin
     ratio = min(max_w / raw.width, max_h / raw.height)
     shot = raw.resize((int(raw.width * ratio), int(raw.height * ratio)), Image.LANCZOS)
-    radius = int(min(shot.size) * 0.07)
+    radius = int(min(shot.size) * (0.25 if island else 0.07))
     framed = rounded(shot, radius)
     x = (width - shot.width) // 2
     y = area_top + (max_h - shot.height) // 2
@@ -99,7 +112,10 @@ def compose(raw_path, out_path):
 def main():
     raw_dir, out_dir = Path(sys.argv[1]), Path(sys.argv[2])
     out_dir.mkdir(parents=True, exist_ok=True)
-    for raw_path in sorted(raw_dir.glob("*.png")):
+    raws = sorted(raw_dir.glob("*.png"))
+    if any(p.stem == "06-lock-screen" for p in raws):
+        raws = [p for p in raws if p.stem != "06-dynamic-island"]
+    for raw_path in raws:
         if raw_path.stem in CAPTIONS:
             compose(raw_path, out_dir / raw_path.name)
 

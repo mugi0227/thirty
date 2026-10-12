@@ -127,7 +127,7 @@ jobs:
           grep -E "Test Case.*(passed|failed)|error:" ../store-${{ matrix.slug }}.log | tail -40
           exit $status
       - name: Add captions
-        run: python3 scripts/make_store_screenshots.py raw store/${{ matrix.slug }}
+        run: scripts/fetch_fonts.sh && python3 scripts/make_store_screenshots.py raw store/${{ matrix.slug }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -222,7 +222,7 @@ jobs:
           python3 -c "from PIL import Image; import glob; [print(f, Image.open(f).size) for f in sorted(glob.glob('../raw/*.png'))]"
           exit $status
       - name: Add captions
-        run: python3 scripts/make_store_screenshots.py raw store/iphone-duo
+        run: scripts/fetch_fonts.sh && python3 scripts/make_store_screenshots.py raw store/iphone-duo
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -127,9 +127,10 @@ struct TimerView: View {
                 onboardingSeen = true
                 guideStart = nil
             }
+            .largeSheetOnPad()
         }
         .sheet(isPresented: $showSkins) {
-            SkinPicker(store: store, selectedID: $skinID)
+            SkinPicker(store: store, selectedID: $skinID).largeSheetOnPad()
         }
         .sheet(isPresented: $showSettings) {
             SettingsView(model: model, store: store, skinID: $skinID) {
@@ -569,6 +570,18 @@ struct TimePickerView: View {
             .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+extension View {
+    /// iPad's default form sheet is small for the illustrated guide.
+    @ViewBuilder
+    func largeSheetOnPad() -> some View {
+        if #available(iOS 18.0, *) {
+            presentationSizing(.page)
+        } else {
+            self
+        }
     }
 }
 

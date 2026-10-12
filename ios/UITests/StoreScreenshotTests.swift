@@ -89,6 +89,16 @@ final class StoreScreenshotTests: XCTestCase {
             springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.03)).press(forDuration: 1.2)
             sleep(2)
             shot("06-dynamic-island")
+            // The Lock Screen shows the Live Activity without any home screen icons.
+            let device = XCUIDevice.shared
+            let lock = NSSelectorFromString("pressLockButton")
+            if device.responds(to: lock) {
+                device.perform(lock)
+                sleep(2)
+                device.perform(lock)
+                sleep(4)
+                shot("06-lock-screen")
+            }
         }
     }
 

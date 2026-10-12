@@ -11,7 +11,13 @@ print(found[-1][1] if found else "")' "$NAME")
 if [ -z "$UDID" ]; then
   # Newer device types (such as iPhone Duo) may have no simulator yet: create one.
   TYPE=$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; n=sys.argv[1]; print(next(t["identifier"] for t in json.load(sys.stdin)["devicetypes"] if t["name"]==n))' "$NAME")
-  RUNTIME=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; r=[x for x in json.load(sys.stdin)["runtimes"] if x["platform"]=="iOS" and x["isAvailable"]]; print(r[-1]["identifier"])')
+  RUNTIME=$(xcrun simctl list runtimes -j | python3 -c '
+import json, sys
+kind = sys.argv[1]
+runtimes = [r for r in json.load(sys.stdin)["runtimes"] if r.get("platform") == "iOS" and r.get("isAvailable")]
+fits = [r for r in runtimes if any(t.get("identifier") == kind for t in r.get("supportedDeviceTypes", []))]
+print((fits or runtimes)[-1]["identifier"])' "$TYPE")
+  echo "creating $NAME ($TYPE) on $RUNTIME" >&2
   UDID=$(xcrun simctl create "$NAME" "$TYPE" "$RUNTIME")
 fi
 xcrun simctl boot "$UDID" >/dev/null 2>&1 || true
