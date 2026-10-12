@@ -187,18 +187,43 @@ jobs:
             video/test.log
           retention-days: 30
 
-  iphone-duo-probe:
+  iphone-duo:
     # iPhone Duo screenshots become required in April 2027 for apps built with
-    # the iOS 27.1 SDK. Look for a Duo simulator on the Xcode 27 image.
+    # the iOS 27.1 SDK. The Xcode 27 image ships an iPhone Duo simulator.
     runs-on: xcode-27
     continue-on-error: true
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
-      - name: List Xcodes and device types
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen && python3 -m pip install --break-system-packages pillow
+      - working-directory: ios
+        run: xcodebuild -version && xcodegen generate
+      - name: Boot iPhone Duo
+        id: sim
         run: |
-          ls -d /Applications/Xcode*.app
-          for xcode in /Applications/Xcode_27*.app; do
-            echo "== $xcode"
-            DEVELOPER_DIR="$xcode/Contents/Developer" xcrun simctl list devicetypes | grep -iE "duo|fold|iphone 18" || true
-            DEVELOPER_DIR="$xcode/Contents/Developer" xcrun simctl list runtimes | grep -i ios || true
-          done
+          xcrun simctl help 2>&1 | grep -iE "fold|posture|hinge|display" || true
+          echo "udid=$(scripts/ci/boot_sim.sh 'iPhone Duo' | tail -1)" >> "$GITHUB_OUTPUT"
+      - name: Capture
+        working-directory: ios
+        run: |
+          mkdir -p ../raw
+          TEST_RUNNER_SCREENSHOT_DIR="$PWD/../raw" \
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
+            -only-testing:ThirtyUITests/StoreScreenshotTests -skip-testing:ThirtyUITests/StoreScreenshotTests/testPreviewVideo \
+            CODE_SIGNING_ALLOWED=NO test > ../store-iphone-duo.log 2>&1
+          status=$?
+          grep -E "Test Case.*(passed|failed)|error:" ../store-iphone-duo.log | tail -40
+          python3 -c "from PIL import Image; import glob; [print(f, Image.open(f).size) for f in sorted(glob.glob('../raw/*.png'))]"
+          exit $status
+      - name: Add captions
+        run: python3 scripts/make_store_screenshots.py raw store/iphone-duo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: store-iphone-duo
+          path: |
+            store/
+            raw/
+            store-*.log
+          retention-days: 30

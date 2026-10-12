@@ -7,9 +7,13 @@ import json, sys
 name = sys.argv[1]
 devices = json.load(sys.stdin)["devices"]
 found = sorted((runtime, d["udid"]) for runtime, items in devices.items() if "iOS" in runtime for d in items if d["name"] == name)
-if not found:
-    sys.exit("no simulator named " + name)
-print(found[-1][1])' "$NAME")
+print(found[-1][1] if found else "")' "$NAME")
+if [ -z "$UDID" ]; then
+  # Newer device types (such as iPhone Duo) may have no simulator yet: create one.
+  TYPE=$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; n=sys.argv[1]; print(next(t["identifier"] for t in json.load(sys.stdin)["devicetypes"] if t["name"]==n))' "$NAME")
+  RUNTIME=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; r=[x for x in json.load(sys.stdin)["runtimes"] if x["platform"]=="iOS" and x["isAvailable"]]; print(r[-1]["identifier"])')
+  UDID=$(xcrun simctl create "$NAME" "$TYPE" "$RUNTIME")
+fi
 xcrun simctl boot "$UDID" >/dev/null 2>&1 || true
 xcrun simctl bootstatus "$UDID" -b >/dev/null
 xcrun simctl ui "$UDID" appearance light
