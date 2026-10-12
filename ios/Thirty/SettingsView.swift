@@ -32,6 +32,16 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    if !plus {
+                        Button { showPlus = true } label: {
+                            HStack {
+                                Label("Thirty+ でできること", systemImage: "sparkles")
+                                Spacer()
+                                Text(store.product?.displayPrice ?? "").foregroundStyle(.secondary)
+                                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
                     Button { showSkins = true } label: {
                         HStack {
                             Text("スキン").foregroundStyle(Color.primary)
@@ -62,9 +72,7 @@ struct SettingsView: View {
                         if !plus { Image(systemName: "lock.fill").font(.caption2) }
                     }
                 } footer: {
-                    if !plus {
-                        Button("Thirty+ でできること") { showPlus = true }.font(.footnote)
-                    }
+                    if !plus { Text("鍵のついた項目は Thirty+（買い切り）で使えます。") }
                 }
 
                 Section {
