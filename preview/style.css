@@ -51,6 +51,10 @@ main[data-phase=paused] .digits svg{animation:blink 1.6s steps(2,jump-none) infi
 .primary svg{width:28px;height:28px}
 .stop{width:56px;height:56px;border-radius:50%;background:var(--soft)}
 .stop svg{width:18px;height:18px}
+.finish{display:flex;flex-direction:column;align-items:center;gap:12px;min-height:122px}
+.again{min-width:180px;height:60px;padding:0 24px;border-radius:30px;background:var(--ink);color:var(--lcd);font-size:18px;font-weight:700}
+.done{min-width:140px;height:44px;border-radius:22px;border:1.5px solid var(--line);font-size:16px;font-weight:600}
+main[data-phase=finished] .increments,main[data-phase=finished] .transport{display:none}
 .dimmed main,.dimmed #hint{filter:brightness(.3)}
 
 /* Landscape: the classic bar timer, bars left and digits right. */

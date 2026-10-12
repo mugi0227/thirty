@@ -35,7 +35,7 @@ with sync_playwright() as p:
     page.screenshot(path=str(out / 'onboarding-4.png'))
     button('タイマーへ').click()
     assert not page.locator('#help').is_visible()
-    assert page.locator('main').evaluate("e=>{const c=e.cloneNode(true);c.querySelectorAll('.sr-only').forEach(n=>n.remove());return c.textContent.replace(/\\s/g,'')}") == 'ロック+1+10'
+    assert page.locator('main').evaluate("e=>{const c=e.cloneNode(true);c.querySelectorAll('.sr-only,[hidden]').forEach(n=>n.remove());return c.textContent.replace(/\\s/g,'')}") == 'ロック+1+10'
     page.screenshot(path=str(out / 'timer-ready.png'))
     page.reload()
     assert not page.locator('#help').is_visible()
@@ -109,10 +109,12 @@ with sync_playwright() as p:
     assert page.locator('main').get_attribute('data-phase') == 'finished'
     page.clock.fast_forward(3000)
     assert page.evaluate('window.alarmCount') == 1
-    button('終了').click()
+    assert button('もう1分').is_visible()
+    page.screenshot(path=str(out / 'timer-finished.png'))
+    button('おしまい').click()
     assert page.locator('#time').get_attribute('aria-valuetext') == '00:03'
     button('画面を暗くする').click()
-    results['checks'].append('Running edit and quick-add; chime play event exactly once; dim restores at completion; stop keeps chosen duration')
+    results['checks'].append('Running edit and quick-add; chime play event exactly once; finish shows one-more/stop; dim restores at completion; stop keeps chosen duration')
 
     button('アクセスガイドでロックする方法').click()
     assert page.locator('#steps span').count() == 3

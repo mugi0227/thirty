@@ -110,6 +110,8 @@ function render(announce = true) {
   $('#action').innerHTML = icon(state.phase === 'running' ? 'pause' : 'play');
   $('#action').disabled = state.configured === 0;
   $('#stop').hidden = state.phase === 'ready';
+  $('#finish').hidden = state.phase !== 'finished';
+  $('#again').textContent = `もう${Math.max(1, Math.ceil(state.configured / 60))}分`;
   document.body.classList.toggle('dimmed', dimmed && ['running', 'paused'].includes(state.phase) && !document.hidden);
   $('#dim').setAttribute('aria-pressed', String(dimmed));
   $('#dim').innerHTML = icon(dimmed ? 'moonOn' : 'moon');
@@ -142,6 +144,8 @@ $('#action').onclick = () => {
   save(); wake(); render();
 };
 $('#stop').onclick = () => { stopAlarm(); state.phase = 'ready'; state.deadline = null; state.remaining = state.configured; showHint = false; save(); wake(); render(); };
+$('#again').onclick = () => { stopAlarm(); state.deadline = Date.now() + state.configured * 1000; state.phase = 'running'; showHint = true; save(); wake(); render(); };
+$('#done').onclick = () => $('#stop').onclick();
 $('#add-one').onclick = () => add(1);
 $('#add-ten').onclick = () => add(10);
 $('#dim').onclick = () => { dimmed = !dimmed; write('thirty.dim', String(dimmed)); render(); };
