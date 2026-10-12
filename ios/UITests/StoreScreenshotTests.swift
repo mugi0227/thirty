@@ -100,7 +100,12 @@ final class StoreScreenshotTests: XCTestCase {
                 device.perform(lock)
                 sleep(2)
                 device.perform(lock)
-                sleep(4)
+                sleep(3)
+                // The Allow prompt is drawn on the Lock Screen itself.
+                for label in ["許可", "Allow"] where springboard.buttons[label].waitForExistence(timeout: 2) {
+                    springboard.buttons[label].tap()
+                    sleep(2)
+                }
                 shot("06-lock-screen")
             }
         }
