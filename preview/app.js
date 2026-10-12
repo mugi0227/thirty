@@ -183,7 +183,7 @@ function guide() {
   clearInterval(demo);
   const pages = [
     () => `<div class="visual"><div class="mini" aria-hidden="true"><div class="mbars">${'<i></i>'.repeat(18)}</div><div class="mtime">30:00</div></div></div>
-      <p class="eyebrow">THIRTY</p><h2>スマホを、そのまま<br>タイマーに。</h2><p>考える前に、スタートを押す。<br>減っていくバーを横目に、<br>ひとつのことだけに取りかかる。</p>`,
+      <p class="eyebrow">THIRTY</p><h2>とりあえず、30分！</h2><p>「やるべきことがあるのに、<br>SNSを1時間見てしまっていた…」<br>そんな時は、考える前に<br>タイマーをスタートしてしまいましょう！</p>`,
     () => `<p class="eyebrow">STEP 1 ・ 任意</p><h2>ほかのアプリに<br>逃げられなくする</h2><p>iPhoneの「アクセスガイド」を使うと、<br>計測中はThirtyから出られなくなります。</p>
       <div class="visual">${crumbs(['設定', 'アクセシビリティ', 'アクセスガイド'])}
       <div class="ios"><div class="ios-row hi">アクセスガイド<span class="toggle"></span></div><div class="ios-note">設定アプリで、このスイッチをオンにします。</div><div class="ios-row">パスコード設定${chev}</div></div></div>

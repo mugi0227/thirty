@@ -115,8 +115,8 @@ struct OnboardingGuide: View {
             switch item {
             case .welcome:
                 MiniTimerDemo().frame(maxWidth: 190, maxHeight: 300).padding(.vertical, 20)
-                titleBlock(eyebrow: "THIRTY", title: "スマホを、そのまま\nタイマーに。",
-                           body: "考える前に、スタートを押す。\n減っていくバーを横目に、\nひとつのことだけに取りかかる。")
+                titleBlock(eyebrow: "THIRTY", title: "とりあえず、30分！",
+                           body: "「やるべきことがあるのに、\nSNSを1時間見てしまっていた…」\nそんな時は、考える前に\nタイマーをスタートしてしまいましょう！")
             case .enable:
                 titleBlock(eyebrow: "STEP 1 ・ 任意", title: "ほかのアプリに\n逃げられなくする",
                            body: "iPhoneの「アクセスガイド」を使うと、\n計測中はThirtyから出られなくなります。")
