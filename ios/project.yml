@@ -1,0 +1,40 @@
+name: Thirty
+options:
+  bundleIdPrefix: jp.mugilab
+  deploymentTarget:
+    iOS: '16.0'
+  xcodeVersion: '16.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    MARKETING_VERSION: '0.2.0'
+    CURRENT_PROJECT_VERSION: '2'
+    CODE_SIGNING_ALLOWED: NO
+targets:
+  Thirty:
+    type: application
+    platform: iOS
+    sources:
+      - Thirty
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: jp.mugilab.thirty
+        TARGETED_DEVICE_FAMILY: '1,2'
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: Thirty/Info.plist
+      properties:
+        CFBundleDisplayName: Thirty
+        LSRequiresIPhoneOS: true
+        UIApplicationSupportsIndirectInputEvents: true
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight

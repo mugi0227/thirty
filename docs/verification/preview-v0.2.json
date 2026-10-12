@@ -1,0 +1,55 @@
+{
+  "preview_only": true,
+  "checks": [
+    "First-launch 3-step onboarding, optional biometry skip, no main copy; seen flag survives reload",
+    "00:00 disables start; 99:59 maximum; quick-add seconds carry",
+    "Start, pause, resume, deadline restoration, 30-bar remaining fraction",
+    "Running edit and quick-add; chime play event exactly once; dim restores at completion; stop keeps chosen duration",
+    "Info reopens onboarding; side/top/home hints and dismissal (preview device choices only)"
+  ],
+  "layouts": [
+    {
+      "width": 320,
+      "height": 568,
+      "theme": "light",
+      "overflow": false,
+      "touch_targets": "passed"
+    },
+    {
+      "width": 375,
+      "height": 667,
+      "theme": "light",
+      "overflow": false,
+      "touch_targets": "passed"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "theme": "light",
+      "overflow": false,
+      "touch_targets": "passed"
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "theme": "light",
+      "overflow": false,
+      "touch_targets": "passed"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "theme": "light",
+      "overflow": false,
+      "touch_targets": "passed"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "theme": "dark",
+      "overflow": false,
+      "touch_targets": "passed"
+    }
+  ],
+  "errors": []
+}
