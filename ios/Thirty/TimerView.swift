@@ -55,7 +55,7 @@ struct TimerView: View {
     /// While running, the controls step aside and the phone is only the timer.
     private var chromeHidden: Bool {
         model.countdown.phase == .running && !voiceOver && guideStart == nil && !showTime
-            && model.now.timeIntervalSince(lastTouch) > idleDelay
+            && Date().timeIntervalSince(lastTouch) > idleDelay
     }
 
     var body: some View {
@@ -82,7 +82,7 @@ struct TimerView: View {
         .statusBarHidden(chromeHidden)
         .persistentSystemOverlays(chromeHidden ? .hidden : .automatic)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: chromeHidden)
-        .onReceive(ticker) { if scenePhase == .active { model.tick(at: $0) } }
+        .onReceive(ticker) { _ in if scenePhase == .active { model.tick() } }
         .onReceive(store.$hasPlus) { model.hasPlus = $0 }
         .onOpenURL { url in
             guard url.scheme == ThirtyLink.scheme, url.host == "start" else { return }
@@ -185,7 +185,7 @@ struct TimerView: View {
     /// LCD-style blink when finished, and a slower one while paused.
     private var blinkOpacity: Double {
         guard !reduceMotion else { return model.countdown.phase == .paused ? 0.5 : 1 }
-        let halfSeconds = Int(model.now.timeIntervalSinceReferenceDate * 2)
+        let halfSeconds = Int(Date().timeIntervalSinceReferenceDate * 2)
         switch model.countdown.phase {
         case .finished: return halfSeconds % 2 == 0 ? 1 : 0.15
         case .paused: return halfSeconds % 4 < 2 ? 1 : 0.15
@@ -460,7 +460,7 @@ struct ButtonHint: View {
             pulses(vertical: vertical)
             VStack(alignment: .leading, spacing: 0) {
                 Text("×3").font(.system(size: 20, weight: .bold).monospacedDigit())
-                Text(kind.title).font(.system(size: 10)).opacity(0.75)
+                Text(kind.title).font(.system(size: 10)).opacity(0.75).lineLimit(1).fixedSize()
             }
             Button(action: onClose) { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).frame(width: 36, height: 44) }
                 .accessibilityLabel("ボタンの案内を閉じる")
