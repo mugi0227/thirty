@@ -1,7 +1,11 @@
-name: Inspect App Review readiness (read only)
+name: Inspect App Store configuration
 on:
   workflow_dispatch:
     inputs:
+      repair_app_availability:
+        description: Create missing app availability for the 175 Thirty+ territories (no review submission)
+        type: boolean
+        default: false
       iap_diagnosis:
         description: Inspect current product pricing and app availability through GET requests
         type: boolean
@@ -24,7 +28,7 @@ jobs:
       - uses: actions/checkout@v5
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
       - name: Inspect App Review readiness through GET requests only
-        if: ${{ !inputs.iap_diagnosis }}
+        if: ${{ !inputs.iap_diagnosis && !inputs.repair_app_availability }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -32,8 +36,15 @@ jobs:
           REQUIRE_ATTACHED: ${{ inputs.require_attached }}
           TARGET_BUILD: ${{ inputs.target_build }}
         run: python3 -u scripts/check_review_readiness.py
+      - name: Set approved app availability and verify it
+        if: ${{ inputs.repair_app_availability }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: python3 -u scripts/set_app_availability.py --apply
       - name: Inspect current In-App Purchase catalog through GET requests only
-        if: ${{ inputs.iap_diagnosis }}
+        if: ${{ inputs.iap_diagnosis || inputs.repair_app_availability }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -46,4 +57,5 @@ jobs:
           path: |
             app-review-readiness.json
             iap-catalog-diagnosis.json
+            app-availability-verification.json
           retention-days: 7
