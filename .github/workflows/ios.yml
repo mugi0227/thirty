@@ -174,10 +174,10 @@ jobs:
           wait $TEST; status=$?
           grep -E "Test Case.*(passed|failed)" "$V/test.log"
           exit $status
-      - name: Encode App Preview (886x1920, 30 fps, H.264, stereo AAC)
+      - name: Encode the full recording (app-preview edits it)
         run: |
           ffmpeg -y -i video/raw.mov -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=48000 \
-            -t 30 -vf "scale=886:-2,crop=886:1920,fps=30,format=yuv420p" \
+            -vf "scale=886:-2,crop=886:1920,fps=30,format=yuv420p" \
             -c:v libx264 -profile:v high -level 4.0 -b:v 10M -maxrate 12M -bufsize 20M \
             -c:a aac -b:a 256k -ar 48000 -ac 2 -shortest -movflags +faststart video/app-preview-iphone.mp4
           ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,channels -show_entries format=duration video/app-preview-iphone.mp4
@@ -188,6 +188,35 @@ jobs:
           path: |
             video/app-preview-iphone.mp4
             video/test.log
+          retention-days: 30
+
+  app-preview:
+    # Lays the recording out under captions with sound (scripts/make_app_preview.py).
+    needs: [preview-video, store-screenshots]
+    if: ${{ !cancelled() && needs.preview-video.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && python3 -m pip install --quiet pillow numpy
+      - uses: actions/download-artifact@v5
+        with:
+          name: app-preview-video
+          path: video
+      - uses: actions/download-artifact@v5
+        continue-on-error: true
+        with:
+          name: store-iphone-large
+          path: large
+      - name: Edit
+        run: |
+          scripts/fetch_fonts.sh
+          python3 scripts/make_app_preview.py video/app-preview-iphone.mp4 app-preview-iphone-6.9.mp4 large/raw/07-dynamic-island.png
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,channels -show_entries format=duration app-preview-iphone-6.9.mp4
+      - uses: actions/upload-artifact@v5
+        with:
+          name: app-preview-final
+          path: app-preview-iphone-6.9.mp4
           retention-days: 30
 
   iphone-duo:

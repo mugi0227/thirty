@@ -117,7 +117,8 @@ struct TimerLiveActivity: Widget {
                     .padding(.horizontal, 8).padding(.bottom, 4)
                 }
             } compactLeading: {
-                Image(systemName: context.state.isBreak ? "cup.and.saucer.fill" : "timer").foregroundStyle(ink)
+                // A small bar timer: six slats of five minutes each.
+                ActivitySlats(state: context.state, ink: ink, count: 6, gap: 2).frame(width: 30, height: 16)
             } compactTrailing: {
                 ActivityTime(state: context.state).font(.system(size: 14, weight: .medium, design: .monospaced))
                     .foregroundStyle(ink).frame(maxWidth: 52)
@@ -129,7 +130,6 @@ struct TimerLiveActivity: Widget {
     }
 }
 
-/// Lock Screen and StandBy: the same bars-and-digits layout as the app.
 /// Lock Screen and StandBy: the same bars-and-digits layout as the app.
 struct LockScreenTimer: View {
     let context: ActivityViewContext<TimerActivityAttributes>
@@ -164,11 +164,11 @@ struct LockScreenTimer: View {
 struct ActivitySlats: View {
     let state: TimerActivityAttributes.ContentState
     let ink: Color
-    private let count = 30
+    var count = 30
+    var gap: CGFloat = 3
 
     var body: some View {
         GeometryReader { geometry in
-            let gap: CGFloat = 3
             let width = max(1, (geometry.size.width - gap * CGFloat(count - 1)) / CGFloat(count))
             let height = geometry.size.height
             HStack(spacing: gap) {

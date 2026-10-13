@@ -42,7 +42,12 @@ final class StoreScreenshotTests: XCTestCase {
 
     private func closeHint(_ app: XCUIApplication) {
         let close = app.buttons["ボタンの案内を閉じる"]
-        if close.waitForExistence(timeout: 2) { close.tap() }
+        // A tap during the start animation can be missed, so check again.
+        guard close.waitForExistence(timeout: 2) else { return }
+        for _ in 0..<3 where close.exists {
+            close.tap()
+            sleep(1)
+        }
     }
 
     private func startRunning(_ app: XCUIApplication, closingHint: Bool = true) {
@@ -102,13 +107,18 @@ final class StoreScreenshotTests: XCTestCase {
             XCUIDevice.shared.press(.home)
             sleep(3)
             let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-            springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.03)).press(forDuration: 1.2)
-            sleep(2)
-            shot("06-dynamic-island")
             // Answer the one-time "Allow Live Activities" prompt if it shows.
             for label in ["許可", "Allow"] where springboard.buttons[label].waitForExistence(timeout: 1) {
                 springboard.buttons[label].tap()
             }
+            // The island over another app, at its real place and size, with
+            // no home screen icons in the picture.
+            let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
+            settings.activate()
+            sleep(3)
+            shot("07-dynamic-island") // compact, as it normally sits
+            XCUIDevice.shared.press(.home)
+            sleep(2)
             // The Lock Screen shows the Live Activity without any home screen icons.
             let device = XCUIDevice.shared
             let lock = NSSelectorFromString("pressLockButton")

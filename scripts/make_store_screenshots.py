@@ -19,8 +19,8 @@ CAPTIONS = {
     "03-guided-access": ("ほかのアプリに逃げられない", "iPhoneのアクセスガイドで画面を固定"),
     "04-finished": ("できても、できなくても", "終わったら「もう30分」か「おしまい」"),
     "05-skin-night": ("夜に映える、ナイトブルー", "6種類のスキンから選べます（Thirty+）"),
-    "06-dynamic-island": ("閉じても、残りが見える", "Dynamic Island と ロック画面、StandBy に対応（Thirty+）"),
-    "06-lock-screen": ("閉じても、残りが見える", "ロック画面、StandBy、Dynamic Island に対応（Thirty+）"),
+    "06-lock-screen": ("閉じても、残りが見える", "ロック画面と StandBy に表示（Thirty+）"),
+    "07-dynamic-island": ("ほかのアプリの最中も", "画面の上に、減っていく棒と残り時間（Thirty+）"),
     "06-skins": ("気分でスキンを選べる", "購入前に試着できます（Thirty+）"),
 }
 BACKGROUND = (184, 193, 170)
@@ -56,22 +56,6 @@ def fit(draw, text, kind, size, max_width):
     return font(kind, size)
 
 
-def island_bottom(image):
-    """Find where the expanded Dynamic Island ends, so the crop keeps all of it
-    and none of the home screen below (whose icons can also be dark)."""
-    x = int(image.width * 0.07)  # left of the slats, inside the pill
-    dark = lambda y: sum(image.getpixel((x, y))[:3]) < 60
-    y = 0
-    limit = int(image.height * 0.3)
-    while y < limit and not dark(y):
-        y += 1
-    while y < limit and dark(y):
-        y += 1
-    if y >= limit:
-        y = int(image.height * 0.17)
-    return min(image.height, y + int(image.height * 0.004))
-
-
 def rounded(image, radius):
     mask = Image.new("L", image.size, 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, *image.size), radius=radius, fill=255)
@@ -88,11 +72,6 @@ def compose(raw_path, out_path):
     if "landscape" in raw_path.stem:
         raw = raw.rotate(90, expand=True)
         width, height = height, width
-    # Only the top of the Dynamic Island capture: the Simulator's home screen
-    # (with its test-runner icon) stays out of the picture.
-    island = raw_path.stem == "06-dynamic-island"
-    if island:
-        raw = raw.crop((0, 0, width, island_bottom(raw)))
     title, subtitle = CAPTIONS[raw_path.stem]
     canvas = Image.new("RGB", (width, height), BACKGROUND)
     draw = ImageDraw.Draw(canvas)
@@ -108,7 +87,7 @@ def compose(raw_path, out_path):
     max_w, max_h = width - 2 * margin, height - area_top - margin
     ratio = min(max_w / raw.width, max_h / raw.height)
     shot = raw.resize((int(raw.width * ratio), int(raw.height * ratio)), Image.LANCZOS)
-    radius = int(min(shot.size) * (0.25 if island else 0.07))
+    radius = int(min(shot.size) * 0.07)
     framed = rounded(shot, radius)
     x = (width - shot.width) // 2
     y = area_top + (max_h - shot.height) // 2
@@ -121,25 +100,6 @@ def compose(raw_path, out_path):
     ImageDraw.Draw(canvas).rounded_rectangle((x - border, y - border, x + shot.width + border, y + shot.height + border),
                                              radius=radius + border, fill=INK)
     canvas.alpha_composite(framed, (x, y))
-    # On the Lock Screen image, a zoomed Dynamic Island shows where the timer
-    # also appears while another app is open.
-    island_path = raw_path.with_name("06-dynamic-island.png")
-    if raw_path.stem == "06-lock-screen" and island_path.exists():
-        island_raw = Image.open(island_path).convert("RGB")
-        strip = island_raw.crop((0, 0, island_raw.width, island_bottom(island_raw)))
-        zoom = (shot.width * 1.08) / strip.width
-        strip = strip.resize((int(strip.width * zoom), int(strip.height * zoom)), Image.LANCZOS)
-        sx, sy = (width - strip.width) // 2, y + int(shot.height * 0.30)
-        glow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-        ImageDraw.Draw(glow).rounded_rectangle((sx, sy + int(18 * scale), sx + strip.width, sy + strip.height + int(18 * scale)),
-                                               radius=int(strip.height * 0.3), fill=(0, 0, 0, 110))
-        canvas = Image.alpha_composite(canvas, glow.filter(ImageFilter.GaussianBlur(int(30 * scale))))
-        ImageDraw.Draw(canvas).rounded_rectangle((sx - border, sy - border, sx + strip.width + border, sy + strip.height + border),
-                                                 radius=int(strip.height * 0.3), fill=INK)
-        canvas.alpha_composite(rounded(strip, int(strip.height * 0.3)), (sx, sy))
-        label_font = font("regular", int(40 * scale))
-        ImageDraw.Draw(canvas).text((width / 2, sy + strip.height + int(56 * scale)), "ほかのアプリを使っていても、画面上部に",
-                                    font=label_font, fill=(240, 240, 235), anchor="mt", stroke_width=int(6 * scale), stroke_fill=INK)
     canvas.convert("RGB").save(out_path, optimize=True)  # App Store rejects alpha channels
     print(out_path, canvas.size)
 
@@ -147,10 +107,7 @@ def compose(raw_path, out_path):
 def main():
     raw_dir, out_dir = Path(sys.argv[1]), Path(sys.argv[2])
     out_dir.mkdir(parents=True, exist_ok=True)
-    raws = sorted(raw_dir.glob("*.png"))
-    if any(p.stem == "06-lock-screen" for p in raws):
-        raws = [p for p in raws if p.stem != "06-dynamic-island"]
-    for raw_path in raws:
+    for raw_path in sorted(raw_dir.glob("*.png")):
         if raw_path.stem in CAPTIONS:
             compose(raw_path, out_dir / raw_path.name)
 
