@@ -1,5 +1,7 @@
 """Read only: inspect live product pricing and app/territory availability."""
 import json
+import base64
+import plistlib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,6 +30,34 @@ config = json.loads((ROOT / 'release/metadata-ja.json').read_text(encoding='utf-
 app = get('/v1/apps', **{'filter[bundleId]': config['bundle_id']})['data'][0]
 app_id = app['id']
 report['app'] = {'id': app_id, 'bundleId': app['attributes']['bundleId']}
+report['signing_configuration'] = []
+for bundle in get('/v1/bundleIds', **{'filter[identifier]': config['bundle_id'], 'limit': 10}).get('data', []):
+    entry = {'identifier': bundle['attributes']['identifier'], 'platform': bundle['attributes'].get('platform')}
+    entry['capabilities'] = [item['attributes']['capabilityType'] for item in
+        get(f"/v1/bundleIds/{bundle['id']}/bundleIdCapabilities", limit=200).get('data', [])]
+    entry['profiles'] = []
+    profiles = get(f"/v1/bundleIds/{bundle['id']}/profiles", limit=200).get('data', [])
+    for profile in profiles:
+        attrs = profile['attributes']
+        if attrs.get('profileType') != 'IOS_APP_STORE':
+            continue
+        summary = {k: attrs.get(k) for k in ('profileType', 'profileState', 'expirationDate')}
+        encoded = attrs.get('profileContent')
+        if encoded:
+            try:
+                data = base64.b64decode(encoded)
+                start = data.index(b'<?xml')
+                end = data.index(b'</plist>', start) + len(b'</plist>')
+                decoded = plistlib.loads(data[start:end])
+                entitlements = decoded.get('Entitlements', {})
+                summary['application_identifier'] = entitlements.get('application-identifier')
+                summary['team_identifier'] = entitlements.get('com.apple.developer.team-identifier')
+                summary['get_task_allow'] = entitlements.get('get-task-allow')
+                summary['beta_reports_active'] = entitlements.get('beta-reports-active')
+            except Exception as error:
+                summary['decode_error'] = type(error).__name__
+        entry['profiles'].append(summary)
+    report['signing_configuration'].append(entry)
 report['app_availability'] = get(f'/v1/apps/{app_id}/appAvailabilityV2', include='territoryAvailabilities')
 availability = report['app_availability'].get('data')
 if availability:
