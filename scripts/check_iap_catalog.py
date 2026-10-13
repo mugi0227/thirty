@@ -84,7 +84,7 @@ for purchase in get(f'/v1/apps/{app_id}/inAppPurchasesV2', limit=50).get('data',
     if schedule:
         for kind in ('manualPrices', 'automaticPrices'):
             item[kind] = get(f"/v1/inAppPurchasePriceSchedules/{schedule['id']}/{kind}",
-                include='inAppPurchasePricePoint,territory', **{'filter[territory]': 'JPN', 'limit': 200,
+                include='inAppPurchasePricePoint,territory', **{'filter[territory]': 'JPN,USA', 'limit': 200,
                 'fields[inAppPurchasePrices]': 'startDate,endDate,manual,inAppPurchasePricePoint,territory',
                 'fields[inAppPurchasePricePoints]': 'customerPrice,proceeds,territory',
                 'fields[territories]': 'currency'})
