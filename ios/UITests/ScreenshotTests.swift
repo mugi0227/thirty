@@ -92,6 +92,9 @@ final class ScreenshotTests: XCTestCase {
         sleep(1)
         shot("10-paused")
 
+        // The time is locked while a session is under way; stop first.
+        XCTAssertFalse(app.buttons["時間を変更"].exists)
+        app.buttons["終了"].tap()
         app.buttons["時間を変更"].tap()
         sleep(2)
         shot("11-time-picker")

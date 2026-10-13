@@ -254,6 +254,7 @@ final class TimerModel: ObservableObject {
     }
     func addMinutes(_ minutes: Int) {
         tick()
+        guard countdown.phase != .running && countdown.phase != .paused else { return }
         let base = countdown.phase == .finished ? countdown.configuredSeconds : seconds
         if minutes < 0 {
             // Taking time off never ends the timer: it stops at one minute.

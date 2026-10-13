@@ -178,8 +178,13 @@ struct TimerView: View {
         }
     }
 
+    /// Running or paused: the time can no longer be changed.
+    private var timing: Bool {
+        model.countdown.phase == .running || model.countdown.phase == .paused
+    }
+
     private var digits: some View {
-        Button { lastTouch = Date(); showTime = true } label: {
+        Button { lastTouch = Date(); if !timing { showTime = true } } label: {
             SevenSegmentTime(text: model.timeText).opacity(blinkOpacity)
                 .overlay(alignment: .topLeading) {
                     if model.isBreak {
@@ -190,7 +195,7 @@ struct TimerView: View {
                 }
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel("時間を変更")
+        .accessibilityLabel(timing ? "残り時間" : "時間を変更")
         .accessibilityValue(model.countdown.phase == .paused ? "\(model.remainingLabel)、一時停止中" : model.remainingLabel)
     }
 
@@ -270,12 +275,16 @@ struct TimerView: View {
 
     private func timingControls(compact: Bool) -> some View {
         VStack(spacing: compact ? 12 : 18) {
+            // Time is set before starting; once a session is under way it stays as it is.
             HStack(spacing: 12) {
                 increment(-10)
                 increment(-1)
                 increment(1)
                 increment(10)
             }
+            .opacity(timing ? 0 : 1)
+            .allowsHitTesting(!timing)
+            .accessibilityHidden(timing)
             HStack(spacing: 20) {
                 if model.countdown.phase != .ready {
                     Button { lastTouch = Date(); model.reset(); showHint = false } label: {
