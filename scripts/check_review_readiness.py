@@ -62,6 +62,7 @@ for info in infos:
 
 purchases = get(f'/v1/apps/{app_id}/inAppPurchasesV2', limit=50).get('data', [])
 report['purchases'] = []
+purchase_version_ids = set()
 for purchase in purchases:
     item = {'attributes': purchase['attributes'], 'relationships': list(purchase.get('relationships', {}))}
     for name in ('inAppPurchaseLocalizations', 'appStoreReviewScreenshot', 'inAppPurchaseAvailability',
@@ -75,13 +76,15 @@ for purchase in purchases:
             if name == 'inAppPurchaseAvailability' and objects:
                 territories = related(objects[0], 'availableTerritories').get('data', [])
                 item['available_territories'] = [obj['id'] for obj in territories]
+            if name == 'versions':
+                purchase_version_ids.update(obj['id'] for obj in objects)
             if name == 'iapPriceSchedule' and objects:
                 prices = related(objects[0], 'manualPrices').get('data', [])
                 item['manual_prices'] = []
                 for price in prices:
-                    territory = related(price, 'territory').get('data')
+                    point = related(price, 'inAppPurchasePricePoint').get('data')
+                    territory = related(point, 'territory').get('data') if point else None
                     if territory and territory['id'] == 'JPN':
-                        point = related(price, 'inAppPurchasePricePoint').get('data')
                         item['japan_price'] = point['attributes'] if point else None
                     item['manual_prices'].append({'territory': territory['id'] if territory else None,
                                                   'attributes': price.get('attributes')})
@@ -99,9 +102,13 @@ for name in ('inAppPurchases', 'inAppPurchasesV2', 'inAppPurchaseVersions'):
 report['review_submissions'] = []
 submissions = related(app, 'reviewSubmissions').get('data', [])
 for submission in submissions:
-    items = get(f"/v1/reviewSubmissions/{submission['id']}/items").get('data', [])
+    items = get(f"/v1/reviewSubmissions/{submission['id']}/items", **{
+        'fields[reviewSubmissionItems]': 'state,appStoreVersion,inAppPurchaseVersion'}).get('data', [])
     report['review_submissions'].append({'attributes': submission['attributes'],
-        'items': [{'attributes': item['attributes'], 'relationships': list(item.get('relationships', {}))} for item in items]})
+        'items': [{'attributes': item['attributes'], 'relationships': list(item.get('relationships', {})),
+                   'includes_version_1_0': (item.get('relationships', {}).get('appStoreVersion', {}).get('data') or {}).get('id') == version['id'],
+                   'includes_thirty_plus': (item.get('relationships', {}).get('inAppPurchaseVersion', {}).get('data') or {}).get('id') in purchase_version_ids}
+                  for item in items]})
 report['app_relationships'] = list(app.get('relationships', {}))
 relation = app.get('relationships', {}).get('appAvailabilityV2', {})
 linkage_url = relation.get('links', {}).get('self')
