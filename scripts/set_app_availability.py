@@ -16,8 +16,8 @@ def payload(app_id, territories):
         raise ValueError('Expected the 175 approved territories, including JPN.')
     return {'data': {'type': 'appAvailabilities', 'attributes': {'availableInNewTerritories': False},
         'relationships': {'app': {'data': {'type': 'apps', 'id': app_id}},
-            'territoryAvailabilities': {'data': [{'type': 'territoryAvailabilities', 'id': code} for code in territories]}}},
-        'included': [{'type': 'territoryAvailabilities', 'id': code,
+            'territoryAvailabilities': {'data': [{'type': 'territoryAvailabilities', 'id': '${' + code + '}'} for code in territories]}}},
+        'included': [{'type': 'territoryAvailabilities', 'id': '${' + code + '}',
             'attributes': {'available': True, 'preOrderEnabled': False},
             'relationships': {'territory': {'data': {'type': 'territories', 'id': code}}}} for code in territories]}
 
