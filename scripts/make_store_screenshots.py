@@ -56,6 +56,22 @@ def fit(draw, text, kind, size, max_width):
     return font(kind, size)
 
 
+def island_bottom(image):
+    """Find where the expanded Dynamic Island ends, so the crop keeps all of it
+    and none of the home screen below (whose icons can also be dark)."""
+    x = int(image.width * 0.07)  # left of the slats, inside the pill
+    dark = lambda y: sum(image.getpixel((x, y))[:3]) < 60
+    y = 0
+    limit = int(image.height * 0.3)
+    while y < limit and not dark(y):
+        y += 1
+    while y < limit and dark(y):
+        y += 1
+    if y >= limit:
+        y = int(image.height * 0.17)
+    return min(image.height, y + int(image.height * 0.004))
+
+
 def rounded(image, radius):
     mask = Image.new("L", image.size, 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, *image.size), radius=radius, fill=255)
@@ -76,7 +92,7 @@ def compose(raw_path, out_path):
     # (with its test-runner icon) stays out of the picture.
     island = raw_path.stem == "06-dynamic-island"
     if island:
-        raw = raw.crop((0, 0, width, int(height * 0.115)))
+        raw = raw.crop((0, 0, width, island_bottom(raw)))
     title, subtitle = CAPTIONS[raw_path.stem]
     canvas = Image.new("RGB", (width, height), BACKGROUND)
     draw = ImageDraw.Draw(canvas)
@@ -110,7 +126,7 @@ def compose(raw_path, out_path):
     island_path = raw_path.with_name("06-dynamic-island.png")
     if raw_path.stem == "06-lock-screen" and island_path.exists():
         island_raw = Image.open(island_path).convert("RGB")
-        strip = island_raw.crop((0, 0, island_raw.width, int(island_raw.height * 0.115)))
+        strip = island_raw.crop((0, 0, island_raw.width, island_bottom(island_raw)))
         zoom = (shot.width * 1.08) / strip.width
         strip = strip.resize((int(strip.width * zoom), int(strip.height * zoom)), Image.LANCZOS)
         sx, sy = (width - strip.width) // 2, y + int(shot.height * 0.30)
