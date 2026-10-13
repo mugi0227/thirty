@@ -1,0 +1,7 @@
+Thirty is a single-screen focus timer. No account or login is needed.
+
+- Start: tap the play button. The whole screen becomes a bar timer; controls hide after 4 seconds and come back with a tap.
+- Guided Access: the app only explains how to turn on the system's Guided Access feature (Settings > Accessibility > Guided Access) and shows which button to triple-click. It does not start or detect the setting by itself, and the timer works without it.
+- In-app purchase "Thirty+" (non-consumable, jp.mugilab.thirty.plus) unlocks extra skins, end sounds, a break cycle, display options, alternate icons and the Live Activity. Open it from the palette icon or Settings (gear icon) > "Thirty+ でできること". "購入を復元" restores purchases.
+- The Live Activity (Lock Screen, StandBy, Dynamic Island) appears while a timer runs after purchasing Thirty+.
+- Local notifications are used only to tell the user the timer has finished.
