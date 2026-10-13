@@ -6,6 +6,7 @@ on:
       - 'claude/**'
     paths:
       - 'ios/**'
+      - 'scripts/**'
       - '.github/workflows/ios.yml'
 concurrency:
   group: ios-${{ github.ref }}
@@ -14,58 +15,45 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: macos-15
-    timeout-minutes: 20
+    runs-on: macos-26
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
         working-directory: ios
-        run: xcodegen generate
+        run: xcodebuild -version && xcodegen generate
       - name: Test deadline and persistence
         working-directory: ios
         run: swift test
-      - name: Build unsigned iPhone app
+      - name: Build unsigned Release app
         working-directory: ios
         run: >-
           xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Release
           -sdk iphoneos -destination 'generic/platform=iOS'
-          -derivedDataPath ../build CODE_SIGNING_ALLOWED=NO build
+          -derivedDataPath ../build CODE_SIGNING_ALLOWED=NO build -quiet
       - name: Package and verify IPA
-        run: python3 scripts/package_ipa.py build/Build/Products/Release-iphoneos/Thirty.app build/Thirty-0.3.0-AltStore.ipa
+        run: python3 scripts/package_ipa.py build/Build/Products/Release-iphoneos/Thirty.app build/Thirty-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:
-          name: Thirty-0.3.0-AltStore
+          name: Thirty-unsigned-ipa
           path: |
             build/*.ipa
             build/*.verification.json
           retention-days: 14
 
   simulator:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Install XcodeGen
-        run: brew install xcodegen
-      - name: Generate Xcode project
-        working-directory: ios
+      - run: brew install xcodegen
+      - working-directory: ios
         run: xcodegen generate
-      - name: Pick an iPhone simulator
+      - name: Boot iPhone 17
         id: sim
-        run: |
-          xcodebuild -version
-          UDID=$(xcrun simctl list devices available -j | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          phones = sorted((runtime, d["name"], d["udid"]) for runtime, items in devices.items() if "iOS" in runtime for d in items if d["name"].startswith("iPhone"))
-          exact = [p for p in phones if p[1] == "iPhone 16"]
-          print((exact or phones)[-1][2])')
-          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
-          xcrun simctl list devices | grep "$UDID"
-          xcrun simctl boot "$UDID"
-          xcrun simctl bootstatus "$UDID" -b
+        run: echo "udid=$(scripts/ci/boot_sim.sh 'iPhone 17' | tail -1)" >> "$GITHUB_OUTPUT"
       - name: Build for testing
         working-directory: ios
         run: |
@@ -76,35 +64,21 @@ jobs:
           status=$?
           grep -E "error:|BUILD (SUCCEEDED|FAILED)|TEST BUILD" ../xcodebuild-build.log | sort -u | head -80
           exit $status
-      - name: Screenshots (light)
+      - name: Walkthrough screenshots (light and dark)
         working-directory: ios
         run: |
           mkdir -p ../screenshots
-          export TEST_RUNNER_SCREENSHOT_DIR="$PWD/../screenshots" TEST_RUNNER_SCREENSHOT_PREFIX="light-"
-          xcrun simctl ui "${{ steps.sim.outputs.udid }}" appearance light
-          set +e
-          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
-            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
-            CODE_SIGNING_ALLOWED=NO test-without-building > ../xcodebuild-test-light.log 2>&1
-          status=$?
-          grep -E "Test Case|error|failed|TEST" ../xcodebuild-test-light.log | tail -60
+          status=0
+          for appearance in light dark; do
+            xcrun simctl ui "${{ steps.sim.outputs.udid }}" appearance $appearance
+            TEST_RUNNER_SCREENSHOT_DIR="$PWD/../screenshots" TEST_RUNNER_SCREENSHOT_PREFIX="$appearance-" \
+            xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+              -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
+              -only-testing:ThirtyUITests/ScreenshotTests \
+              CODE_SIGNING_ALLOWED=NO test-without-building > ../xcodebuild-test-$appearance.log 2>&1 || status=1
+            grep -E "Test Case.*(passed|failed)|error:" ../xcodebuild-test-$appearance.log | tail -40
+          done
           exit $status
-      - name: Screenshots (dark)
-        if: always()
-        working-directory: ios
-        run: |
-          export TEST_RUNNER_SCREENSHOT_DIR="$PWD/../screenshots" TEST_RUNNER_SCREENSHOT_PREFIX="dark-"
-          xcrun simctl ui "${{ steps.sim.outputs.udid }}" appearance dark
-          set +e
-          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
-            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
-            CODE_SIGNING_ALLOWED=NO test-without-building > ../xcodebuild-test-dark.log 2>&1
-          status=$?
-          grep -E "Test Case|error|failed|TEST" ../xcodebuild-test-dark.log | tail -60
-          exit $status
-      - name: List screenshots
-        if: always()
-        run: ls -la screenshots || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -113,3 +87,162 @@ jobs:
             screenshots/
             xcodebuild-*.log
           retention-days: 14
+
+  store-screenshots:
+    runs-on: macos-26
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Required: iPhone with Dynamic Island (medium display), 1206 x 2622.
+          - device: iPhone 17
+            slug: iphone-medium
+          # Large iPhone class, 1320 x 2868 (used for 6.9" and scaled down).
+          - device: iPhone 17 Pro Max
+            slug: iphone-large
+          # Required because Thirty runs on iPad: 13-inch, 2064 x 2752.
+          - device: iPad Pro 13-inch (M5)
+            slug: ipad-13
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen && python3 -m pip install --break-system-packages pillow
+      - working-directory: ios
+        run: xcodegen generate
+      - name: Boot ${{ matrix.device }}
+        id: sim
+        run: echo "udid=$(scripts/ci/boot_sim.sh '${{ matrix.device }}' | tail -1)" >> "$GITHUB_OUTPUT"
+      - name: Capture
+        working-directory: ios
+        run: |
+          mkdir -p ../raw
+          TEST_RUNNER_SCREENSHOT_DIR="$PWD/../raw" \
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
+            -only-testing:ThirtyUITests/StoreScreenshotTests -skip-testing:ThirtyUITests/StoreScreenshotTests/testPreviewVideo \
+            CODE_SIGNING_ALLOWED=NO test > ../store-${{ matrix.slug }}.log 2>&1
+          status=$?
+          grep -E "Test Case.*(passed|failed)|error:" ../store-${{ matrix.slug }}.log | tail -40
+          exit $status
+      - name: Add captions
+        run: scripts/fetch_fonts.sh && python3 scripts/make_store_screenshots.py raw store/${{ matrix.slug }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: store-${{ matrix.slug }}
+          path: |
+            store/
+            raw/
+            store-*.log
+          retention-days: 30
+
+  preview-video:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen ffmpeg
+      - working-directory: ios
+        run: xcodegen generate
+      - name: Boot iPhone 17 Pro Max
+        id: sim
+        run: echo "udid=$(scripts/ci/boot_sim.sh 'iPhone 17 Pro Max' | tail -1)" >> "$GITHUB_OUTPUT"
+      - name: Build for testing
+        working-directory: ios
+        run: >-
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug
+          -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim
+          CODE_SIGNING_ALLOWED=NO build-for-testing -quiet
+      - name: Record
+        working-directory: ios
+        run: |
+          mkdir -p ../video
+          V="$PWD/../video"
+          TEST_RUNNER_SCREENSHOT_DIR="$V" \
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
+            -only-testing:ThirtyUITests/StoreScreenshotTests/testPreviewVideo \
+            CODE_SIGNING_ALLOWED=NO test-without-building > "$V/test.log" 2>&1 &
+          TEST=$!
+          for i in $(seq 1 600); do [ -f "$V/app-ready" ] && break; sleep 0.2; done
+          xcrun simctl io "${{ steps.sim.outputs.udid }}" recordVideo --codec h264 --force "$V/raw.mov" 2> "$V/recorder.log" &
+          RECORDER=$!
+          for i in $(seq 1 100); do grep -q "Recording started" "$V/recorder.log" && break; sleep 0.1; done
+          touch "$V/recording-ready"
+          for i in $(seq 1 600); do [ -f "$V/done" ] && break; sleep 0.2; done
+          kill -INT $RECORDER; wait $RECORDER || true
+          wait $TEST; status=$?
+          grep -E "Test Case.*(passed|failed)" "$V/test.log"
+          exit $status
+      - name: Encode App Preview (886x1920, 30 fps, H.264, stereo AAC)
+        run: |
+          ffmpeg -y -i video/raw.mov -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=48000 \
+            -t 30 -vf "scale=886:-2,crop=886:1920,fps=30,format=yuv420p" \
+            -c:v libx264 -profile:v high -level 4.0 -b:v 10M -maxrate 12M -bufsize 20M \
+            -c:a aac -b:a 256k -ar 48000 -ac 2 -shortest -movflags +faststart video/app-preview-iphone.mp4
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,channels -show_entries format=duration video/app-preview-iphone.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-preview-video
+          path: |
+            video/app-preview-iphone.mp4
+            video/test.log
+          retention-days: 30
+
+  iphone-duo:
+    # iPhone Duo screenshots become required in April 2027 for apps built with
+    # the iOS 27.1 SDK. The Xcode 27 image ships an iPhone Duo simulator.
+    runs-on: xcode-27
+    continue-on-error: true
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen && python3 -m pip install --break-system-packages pillow
+      - name: Look for an iOS runtime that can run iPhone Duo
+        id: duo
+        run: |
+          # On 2026-10-12 the image has the iPhone Duo device type, but no
+          # installed or downloadable runtime (27.0, 27.2) accepts it.
+          XCODE=$(ls -d /Applications/Xcode_27.[0-9].app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+          if xcrun simctl list runtimes -j | python3 -c 'import json,sys; t="com.apple.CoreSimulator.SimDeviceType.iPhone-Duo"; sys.exit(0 if any(any(d.get("identifier")==t for d in r.get("supportedDeviceTypes",[])) for r in json.load(sys.stdin)["runtimes"] if r.get("isAvailable")) else 1)'; then
+            echo "supported=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No simulator runtime supports iPhone Duo yet; skipping Duo screenshots (not required before April 2027)."
+            echo "supported=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.duo.outputs.supported == 'true'
+        working-directory: ios
+        run: xcodegen generate
+      - name: Boot iPhone Duo
+        if: steps.duo.outputs.supported == 'true'
+        id: sim
+        run: echo "udid=$(scripts/ci/boot_sim.sh 'iPhone Duo' | tail -1)" >> "$GITHUB_OUTPUT"
+      - name: Capture
+        if: steps.duo.outputs.supported == 'true'
+        working-directory: ios
+        run: |
+          mkdir -p ../raw
+          TEST_RUNNER_SCREENSHOT_DIR="$PWD/../raw" \
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
+            -only-testing:ThirtyUITests/StoreScreenshotTests -skip-testing:ThirtyUITests/StoreScreenshotTests/testPreviewVideo \
+            CODE_SIGNING_ALLOWED=NO test > ../store-iphone-duo.log 2>&1
+          status=$?
+          grep -E "Test Case.*(passed|failed)|error:" ../store-iphone-duo.log | tail -40
+          python3 -c "from PIL import Image; import glob; [print(f, Image.open(f).size) for f in sorted(glob.glob('../raw/*.png'))]"
+          exit $status
+      - name: Add captions
+        if: steps.duo.outputs.supported == 'true'
+        run: scripts/fetch_fonts.sh && python3 scripts/make_store_screenshots.py raw store/iphone-duo
+      - uses: actions/upload-artifact@v4
+        if: steps.duo.outputs.supported == 'true'
+        with:
+          name: store-iphone-duo
+          path: |
+            store/
+            raw/
+            store-*.log
+          retention-days: 30

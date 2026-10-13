@@ -109,13 +109,12 @@ struct TimerLiveActivity: Widget {
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 14) {
-                        ActivitySlats(state: context.state, slats: context.attributes.slats, ink: ink, gap: .black)
-                            .frame(height: 40)
+                        ActivitySlats(state: context.state, ink: ink).frame(height: 44)
                         ActivityTime(state: context.state).font(.system(size: 30, weight: .light, design: .monospaced))
                             .foregroundStyle(ink)
-                            .frame(width: 110, alignment: .trailing)
+                            .frame(width: 104, alignment: .trailing)
                     }
-                    .padding(.horizontal, 6)
+                    .padding(.horizontal, 8).padding(.bottom, 4)
                 }
             } compactLeading: {
                 Image(systemName: context.state.isBreak ? "cup.and.saucer.fill" : "timer").foregroundStyle(ink)
@@ -131,13 +130,14 @@ struct TimerLiveActivity: Widget {
 }
 
 /// Lock Screen and StandBy: the same bars-and-digits layout as the app.
+/// Lock Screen and StandBy: the same bars-and-digits layout as the app.
 struct LockScreenTimer: View {
     let context: ActivityViewContext<TimerActivityAttributes>
 
     var body: some View {
         let colors = LCDPalette.colors(for: context.attributes.skinID)
-        HStack(spacing: 16) {
-            ActivitySlats(state: context.state, slats: context.attributes.slats, ink: colors.ink, gap: colors.lcd)
+        HStack(spacing: 14) {
+            ActivitySlats(state: context.state, ink: colors.ink)
             Rectangle().fill(colors.ink.opacity(0.16)).frame(width: 1.5)
             VStack(alignment: .trailing, spacing: 2) {
                 if context.state.isBreak {
@@ -147,45 +147,58 @@ struct LockScreenTimer: View {
                 }
                 ActivityTime(state: context.state).font(.system(size: 36, weight: .light, design: .monospaced))
             }
-            .frame(width: 130, alignment: .trailing)
+            .frame(width: 124, alignment: .trailing)
         }
         .foregroundStyle(colors.ink)
         .padding(16)
-        .frame(height: 110)
+        .frame(height: 104)
     }
 }
 
-/// While running the system animates a countdown ProgressView; slats are
-/// drawn by cutting gaps over it in the background colour.
+/// Thirty slats that empty on their own, right to left, with no updates.
+///
+/// Each slat is a system timer ProgressView covering one thirtieth of the
+/// session, turned upright. Before its turn it reads full, during its turn
+/// it drains from the top, and afterwards it stays empty, so together they
+/// behave like the app's bar while the app is suspended.
 struct ActivitySlats: View {
     let state: TimerActivityAttributes.ContentState
-    let slats: Int
     let ink: Color
-    let gap: Color
+    private let count = 30
 
     var body: some View {
-        ZStack {
-            Rectangle().fill(ink.opacity(0.12))
-            if let deadline = state.deadline {
-                let start = deadline.addingTimeInterval(-state.total)
-                ProgressView(timerInterval: start...deadline, countsDown: true) { EmptyView() } currentValueLabel: { EmptyView() }
-                    .progressViewStyle(.linear)
-                    .tint(ink)
-                    .scaleEffect(x: 1, y: 40, anchor: .center)
-                    .clipped()
-            } else {
-                GeometryReader { geometry in
-                    let fraction = state.total > 0 ? max(0, min(1, state.remaining / state.total)) : 0
-                    Rectangle().fill(ink).frame(width: geometry.size.width * fraction)
-                }
-            }
-            HStack(spacing: 0) {
-                ForEach(0..<slats, id: \.self) { _ in
-                    Color.clear.overlay(alignment: .trailing) { Rectangle().fill(gap).frame(width: slats > 30 ? 1 : 2) }
+        GeometryReader { geometry in
+            let gap: CGFloat = 3
+            let width = max(1, (geometry.size.width - gap * CGFloat(count - 1)) / CGFloat(count))
+            let height = geometry.size.height
+            HStack(spacing: gap) {
+                ForEach(0..<count, id: \.self) { index in
+                    slat(index, length: height)
+                        .frame(width: width, height: height)
                 }
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 2))
+    }
+
+    @ViewBuilder
+    private func slat(_ index: Int, length: CGFloat) -> some View {
+        let share = state.total / Double(count)
+        if let deadline = state.deadline, share > 0 {
+            // Slat `index` (from the left) is lit while more than index × share remains.
+            let end = deadline.addingTimeInterval(-Double(index) * share)
+            ProgressView(timerInterval: end.addingTimeInterval(-share)...end, countsDown: true) {
+                EmptyView()
+            } currentValueLabel: {
+                EmptyView()
+            }
+            .progressViewStyle(.linear)
+            .tint(ink)
+            .frame(width: length)
+            .rotationEffect(.degrees(-90))
+        } else {
+            let lit = state.total > 0 ? Int(ceil(state.remaining / state.total * Double(count))) : 0
+            RoundedRectangle(cornerRadius: 1).fill(index < lit ? ink : ink.opacity(0.15))
+        }
     }
 }
 

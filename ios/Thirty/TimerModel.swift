@@ -2,10 +2,34 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
+/// The timer's notion of "now". Debug builds can run it faster
+/// (-ThirtyTimeScale 90) so the preview video shows a whole session.
+enum AppClock {
+    #if DEBUG
+    private static let scale = max(1, UserDefaults.standard.double(forKey: "ThirtyTimeScale"))
+    private static let origin = Date()
+    /// Screenshot runs pass -ThirtyJumpAfterStart 450 to land mid-session at a fixed time.
+    private static var offset: TimeInterval = 0
+    static func now() -> Date {
+        let real = scale == 1 ? Date() : origin.addingTimeInterval(Date().timeIntervalSince(origin) * scale)
+        return real.addingTimeInterval(offset)
+    }
+    static func didStart() {
+        offset += UserDefaults.standard.double(forKey: "ThirtyJumpAfterStart")
+    }
+    /// How far the debug clock runs ahead, so the Live Activity can match the app.
+    static var lead: TimeInterval { now().timeIntervalSince(Date()) }
+    #else
+    static func now() -> Date { Date() }
+    static func didStart() {}
+    static var lead: TimeInterval { 0 }
+    #endif
+}
+
 @MainActor
 final class TimerModel: ObservableObject {
     @Published private(set) var countdown: Countdown
-    @Published private(set) var now = Date()
+    @Published private(set) var now = AppClock.now()
     @Published var notificationNotice: String?
     @Published var isGuidedAccessActive = UIAccessibility.isGuidedAccessEnabled
     @Published var dimScreen: Bool {
@@ -114,7 +138,7 @@ final class TimerModel: ObservableObject {
     private var sound: EndSound { hasPlus ? endSound : .chime }
     var remainingLabel: String { "残り\(seconds / 60)分\(seconds % 60)秒" }
 
-    func tick(at date: Date = Date(), announceCompletion: Bool = true) {
+    func tick(at date: Date = AppClock.now(), announceCompletion: Bool = true) {
         now = date
         let previous = countdown.phase
         countdown.refresh(at: date)
@@ -155,7 +179,7 @@ final class TimerModel: ObservableObject {
     private func endBreak() {
         guard isBreak else { return }
         setBreak(false)
-        countdown.setSeconds(workSeconds, at: Date())
+        countdown.setSeconds(workSeconds, at: AppClock.now())
         countdown.reset()
         changed()
     }
@@ -177,22 +201,24 @@ final class TimerModel: ObservableObject {
 
     func start() {
         guard countdown.configuredSeconds > 0 else { return }
-        now = Date()
+        now = AppClock.now()
         effects.stopAlarm()
         countdown.start(at: now)
+        AppClock.didStart()
+        now = AppClock.now()
         notificationNotice = nil
         changed(requestPermission: true)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 
     func pause() {
-        now = Date()
+        now = AppClock.now()
         countdown.pause(at: now)
         changed()
     }
 
     func resume() {
-        now = Date()
+        now = AppClock.now()
         countdown.resume(at: now)
         changed(requestPermission: true)
     }
@@ -201,10 +227,10 @@ final class TimerModel: ObservableObject {
         effects.stopAlarm()
         if isBreak {
             setBreak(false)
-            countdown.setSeconds(workSeconds, at: Date())
+            countdown.setSeconds(workSeconds, at: AppClock.now())
         }
         countdown.reset()
-        now = Date()
+        now = AppClock.now()
         notificationNotice = nil
         changed()
     }
@@ -222,7 +248,7 @@ final class TimerModel: ObservableObject {
 
     func setSeconds(_ seconds: Int) {
         effects.stopAlarm()
-        now = Date()
+        now = AppClock.now()
         countdown.setSeconds(seconds, at: now)
         changed()
     }
@@ -257,6 +283,15 @@ final class TimerModel: ObservableObject {
         effects.setDimmed(isActive && dimScreen && timing)
     }
 
+    /// Screenshot and video runs pass -ThirtyNoPrompt YES to keep the alert out of frame.
+    private static var suppressPrompt: Bool {
+        #if DEBUG
+        return UserDefaults.standard.bool(forKey: "ThirtyNoPrompt")
+        #else
+        return false
+        #endif
+    }
+
     /// A version check also handles an old permission prompt completing after reset.
     private func syncNotification(requestPermission: Bool) {
         revision += 1
@@ -271,7 +306,7 @@ final class TimerModel: ObservableObject {
         notificationTask = Task { [weak self] in
             let settings = await center.notificationSettings()
             var allowed = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
-            if settings.authorizationStatus == .notDetermined && requestPermission {
+            if settings.authorizationStatus == .notDetermined && requestPermission && !Self.suppressPrompt {
                 allowed = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
             }
             guard let self, !Task.isCancelled, currentRevision == self.revision else { return }
