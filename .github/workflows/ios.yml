@@ -190,6 +190,35 @@ jobs:
             video/test.log
           retention-days: 30
 
+  app-preview:
+    # Lays the recording out under captions with sound (scripts/make_app_preview.py).
+    needs: [preview-video, store-screenshots]
+    if: ${{ !cancelled() && needs.preview-video.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && python3 -m pip install --quiet pillow numpy
+      - uses: actions/download-artifact@v5
+        with:
+          name: app-preview-video
+          path: video
+      - uses: actions/download-artifact@v5
+        continue-on-error: true
+        with:
+          name: store-iphone-large
+          path: large
+      - name: Edit
+        run: |
+          scripts/fetch_fonts.sh
+          python3 scripts/make_app_preview.py video/app-preview-iphone.mp4 app-preview-iphone-6.9.mp4 large/raw/07-dynamic-island.png
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,channels -show_entries format=duration app-preview-iphone-6.9.mp4
+      - uses: actions/upload-artifact@v5
+        with:
+          name: app-preview-final
+          path: app-preview-iphone-6.9.mp4
+          retention-days: 30
+
   iphone-duo:
     # iPhone Duo screenshots become required in April 2027 for apps built with
     # the iOS 27.1 SDK. The Xcode 27 image ships an iPhone Duo simulator.
