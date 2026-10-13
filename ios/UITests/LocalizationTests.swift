@@ -9,6 +9,9 @@ final class LocalizationTests: XCTestCase {
     }
 
     private func shot(_ name: String) {
+        // The guide and press illustrations animate independently of XCTest's
+        // idle detection. Capture after the page transition has settled.
+        Thread.sleep(forTimeInterval: 1)
         let screenshot = XCUIScreen.main.screenshot()
         let attachment = XCTAttachment(screenshot: screenshot)
         attachment.name = name
@@ -45,7 +48,10 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [guideClosed], timeout: 10), .completed)
         XCTAssertTrue(app.buttons[english ? "Start" : "開始"].waitForExistence(timeout: 5))
         shot(language + "-05-timer")
-        app.buttons[english ? "Change time" : "時間を変更"].tap()
+        // The button's center lies in the empty space between the colon dots.
+        // Tap the top segment of the first digit to exercise the digit action.
+        app.buttons[english ? "Change time" : "時間を変更"]
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.125, dy: 0.10)).tap()
         let cancel = app.buttons[english ? "Cancel" : "キャンセル"]
         let pickerOpened = cancel.waitForExistence(timeout: 15)
         shot(language + "-06-time-picker")
@@ -75,7 +81,7 @@ final class LocalizationTests: XCTestCase {
         app.buttons["close-settings"].tap()
         app.buttons[english ? "Skins" : "スキン"].tap()
         XCTAssertTrue(app.navigationBars[english ? "Skins" : "スキン"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts[english ? "Classic" : "クラシック"].firstMatch.exists)
+        XCTAssertTrue(app.buttons[english ? "Classic" : "クラシック"].exists)
         shot(language + "-11-skins")
         app.buttons[close].firstMatch.tap()
         XCUIDevice.shared.orientation = .landscapeLeft
