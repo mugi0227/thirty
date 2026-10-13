@@ -2,6 +2,7 @@
 import json
 import base64
 import plistlib
+import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,10 +81,15 @@ schedule = report['app_price_schedule'].get('data')
 if schedule:
     report['app_prices_jpn'] = get(f"/v1/appPriceSchedules/{schedule['id']}/manualPrices",
         include='appPricePoint,territory', **{'filter[territory]': 'JPN', 'limit': 200})
+    for kind in ('manualPrices', 'automaticPrices'):
+        report['app_' + kind] = get(f"/v1/appPriceSchedules/{schedule['id']}/{kind}",
+            include='appPricePoint,territory', **{'filter[territory]': 'JPN,USA', 'limit': 200})
 report['purchases'] = []
 for purchase in get(f'/v1/apps/{app_id}/inAppPurchasesV2', limit=50).get('data', []):
     pid = purchase['id']
     item = {'id': pid, 'attributes': purchase['attributes']}
+    item['direct_readback'] = get(f'/v2/inAppPurchases/{pid}',
+        include='versions,inAppPurchaseAvailability,iapPriceSchedule')
     item['localizations'] = get(f'/v2/inAppPurchases/{pid}/inAppPurchaseLocalizations')
     item['availability'] = get(f'/v2/inAppPurchases/{pid}/inAppPurchaseAvailability')
     availability = item['availability'].get('data')
@@ -100,6 +106,43 @@ for purchase in get(f'/v1/apps/{app_id}/inAppPurchasesV2', limit=50).get('data',
                 'fields[territories]': 'currency'})
     report['purchases'].append(item)
 
+def prices(result, point_type, point_relationship):
+    included = {(x['type'], x['id']): x for x in result.get('included', [])}
+    output = []
+    for entry in result.get('data', []):
+        relationships = entry.get('relationships', {})
+        territory = relationships.get('territory', {}).get('data', {}).get('id')
+        point = relationships.get(point_relationship, {}).get('data', {}).get('id')
+        output.append({'territory': territory,
+            'customerPrice': included.get((point_type, point), {}).get('attributes', {}).get('customerPrice'),
+            **entry['attributes']})
+    return output
+
+source = (ROOT / 'ios/Thirty/Store.swift').read_text(encoding='utf-8')
+source_id = re.search(r'static let plusID = "([^"]+)"', source).group(1)
+app_territories = report.get('app_territories', {}).get('data', [])
+app_available = {x['relationships']['territory']['data']['id'] for x in app_territories
+                 if x['attributes'].get('available')}
+report['semantic_checks'] = {'source_product_id': source_id,
+    'source_product_id_utf8_hex': source_id.encode('utf-8').hex(),
+    'source_product_id_ascii_only': source_id.isascii(),
+    'available_app_territory_count': len(app_available),
+    'app_prices': sum([prices(report.get('app_' + kind, {}), 'appPricePoints', 'appPricePoint')
+                       for kind in ('manualPrices', 'automaticPrices')], []),
+    'purchases': []}
+for purchase in report['purchases']:
+    iap_available = {x['id'] for x in purchase.get('territories', {}).get('data', [])}
+    report['semantic_checks']['purchases'].append({
+        'id': purchase['id'], 'product_id': purchase['attributes']['productId'],
+        'source_id_matches_exactly': source_id == purchase['attributes']['productId'],
+        'direct_lookup_matches_app_listing': purchase.get('direct_readback', {}).get('data', {}).get('id') == purchase['id'],
+        'available_iap_territory_count': len(iap_available),
+        'app_and_iap_available_territories_identical': app_available == iap_available,
+        'only_available_in_app': sorted(app_available - iap_available),
+        'only_available_in_iap': sorted(iap_available - app_available),
+        'prices': sum([prices(purchase.get(kind, {}), 'inAppPurchasePricePoints', 'inAppPurchasePricePoint')
+                       for kind in ('manualPrices', 'automaticPrices')], [])})
+
 Path('iap-catalog-diagnosis.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
 print(json.dumps({'app': report['app'], 'app_availability_exists': bool(report['app_availability'].get('data')),
-    'purchases': [p['attributes']['productId'] for p in report['purchases']], 'errors': report['errors']}, ensure_ascii=False))
+    'semantic_checks': report['semantic_checks'], 'errors': report['errors']}, ensure_ascii=False))
