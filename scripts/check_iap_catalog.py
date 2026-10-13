@@ -32,9 +32,11 @@ app_id = app['id']
 report['app'] = {'id': app_id, 'bundleId': app['attributes']['bundleId']}
 report['signing_configuration'] = []
 for bundle in get('/v1/bundleIds', **{'filter[identifier]': config['bundle_id'], 'limit': 10}).get('data', []):
+    if bundle['attributes']['identifier'] != config['bundle_id']:
+        continue
     entry = {'identifier': bundle['attributes']['identifier'], 'platform': bundle['attributes'].get('platform')}
     entry['capabilities'] = [item['attributes']['capabilityType'] for item in
-        get(f"/v1/bundleIds/{bundle['id']}/bundleIdCapabilities", limit=200).get('data', [])]
+        get(f"/v1/bundleIds/{bundle['id']}/bundleIdCapabilities").get('data', [])]
     entry['profiles'] = []
     profiles = get(f"/v1/bundleIds/{bundle['id']}/profiles", limit=200).get('data', [])
     for profile in profiles:
