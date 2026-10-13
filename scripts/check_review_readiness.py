@@ -1,5 +1,7 @@
 """Inspect existing App Store Connect resources without changing anything."""
 import json
+import os
+import time
 from pathlib import Path
 
 from asc_metadata import API, Client, ROOT
@@ -133,7 +135,23 @@ if linkage_url and linkage_url.startswith(API + '/'):
             territories = related(resource, 'territoryAvailabilities').get('data', [])
             report['territory_availability'] = [{'attributes': obj['attributes'],
                 'territory': obj.get('relationships', {}).get('territory', {}).get('data')} for obj in territories]
+target_build = os.environ.get('TARGET_BUILD', '')
+if target_build:
+    deadline = time.monotonic() + 600
+    while True:
+        builds = get('/v1/builds', **{'filter[app]': app_id, 'sort': '-uploadedDate', 'limit': 10}).get('data', [])
+        target = next((obj for obj in builds if obj['attributes']['version'] == target_build), None)
+        report['target_build'] = {k: target['attributes'].get(k) for k in
+            ('version', 'processingState', 'expired', 'uploadedDate')} if target else None
+        print(json.dumps({'target_build': report['target_build']}), flush=True)
+        if target and target['attributes'].get('processingState') in ('VALID', 'FAILED', 'INVALID'):
+            break
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(20)
 Path('app-review-readiness.json').write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding='utf-8')
+if target_build and (report.get('target_build') or {}).get('processingState') != 'VALID':
+    raise SystemExit('Target build has not become VALID. Inspect the report.')
 print(json.dumps({'version': report.get('version'), 'build': report.get('build'),
                   'review_contact_fields_present': report.get('review_contact_fields_present'),
                   'review_notes_present': report.get('review_notes_present'),
