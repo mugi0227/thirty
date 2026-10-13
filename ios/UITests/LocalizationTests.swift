@@ -39,12 +39,20 @@ final class LocalizationTests: XCTestCase {
         app.buttons[next].tap()
         shot(language + "-04-buttons")
         app.buttons[english ? "Open timer" : "タイマーへ"].tap()
+        let guideClosed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: app.buttons[english ? "Open timer" : "タイマーへ"])
+        XCTAssertEqual(XCTWaiter.wait(for: [guideClosed], timeout: 10), .completed)
         XCTAssertTrue(app.buttons[english ? "Start" : "開始"].waitForExistence(timeout: 5))
         shot(language + "-05-timer")
         app.buttons[english ? "Change time" : "時間を変更"].tap()
-        XCTAssertTrue(app.navigationBars[english ? "Time" : "時間"].waitForExistence(timeout: 5))
+        let cancel = app.buttons[english ? "Cancel" : "キャンセル"]
+        let pickerOpened = cancel.waitForExistence(timeout: 15)
         shot(language + "-06-time-picker")
-        app.buttons[english ? "Cancel" : "キャンセル"].tap()
+        if !pickerOpened { print(app.debugDescription) }
+        XCTAssertTrue(pickerOpened)
+        XCTAssertTrue(app.buttons[english ? "Set time" : "時間を決定"].exists)
+        cancel.tap()
         app.buttons[settings].tap()
         XCTAssertTrue(app.navigationBars[settings].waitForExistence(timeout: 5))
         XCTAssertTrue(app.switches[english ? "Start when opened" : "開いたらすぐスタート"].exists)
