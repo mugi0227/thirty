@@ -37,12 +37,17 @@
 3. **App IDを作る**：`jp.mugilab.thirty`（App）と `jp.mugilab.thirty.widgets`（ウィジェット拡張）。Xcodeの自動署名でも作られます。
 4. App Store Connectで **新規App** を作成。名前は [metadata-ja.md](metadata-ja.md) の案、プライマリ言語は日本語、Bundle IDは上記。
 5. **App内課金を作成**：非消耗型、製品ID `jp.mugilab.thirty.plus`、価格は案で¥480。表示名と説明、審査用スクリーンショット（Thirty+の画面）は [review-notes.md](review-notes.md)。
-6. **署名してアップロード**
-   ```sh
-   cd ios
-   xcodegen generate   # チームID 572NVCGLGQ は project.yml に設定済み
-   open Thirty.xcodeproj   # Product > Archive → Distribute App → App Store Connect
-   ```
+6. **署名してアップロード（Macなし、GitHub Actionsで）**
+   1. App Store Connect →「ユーザとアクセス」→「統合」→「App Store Connect API」→「チームキー」で「＋」。名前は自由、アクセスは **Admin**（Appleのクラウド署名を使うため）。
+   2. 作成後に一度だけダウンロードできる `AuthKey_XXXXXXXXXX.p8` を保存。画面に出る **キーID** と、一覧の上の **Issuer ID** も控える。
+   3. GitHubのリポジトリ →「Settings」→「Secrets and variables」→「Actions」→「New repository secret」で3つ登録。
+      - `ASC_KEY_ID`：キーID
+      - `ASC_ISSUER_ID`：Issuer ID
+      - `ASC_KEY_P8`：.p8ファイルをテキストで開いた中身すべて（`-----BEGIN PRIVATE KEY-----` から最後の行まで）
+   4. 「Actions」→「Upload to App Store Connect」→「Run workflow」。約15〜25分でTestFlightにビルドが届きます。ビルド番号はワークフローの実行番号で自動的に増えます。
+   - 署名証明書やプロビジョニングプロファイルを手で作る必要はありません（Xcodeのクラウド署名）。
+   - 先にApp Store Connectで「新規App」を作っておかないと、アップロードは失敗します。
+   - Macがある場合は、`cd ios && xcodegen generate` のあとXcodeで Product > Archive → Distribute App でも同じです。
 7. **TestFlightで実機確認**。特に次の項目：
    - ロック画面、StandBy、Dynamic Islandの表示（Thirty+）
    - ホーム／ロック画面のウィジェット、コントロールセンター、アクションボタン、アイコン長押し
