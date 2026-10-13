@@ -254,8 +254,19 @@ final class TimerModel: ObservableObject {
     }
     func addMinutes(_ minutes: Int) {
         tick()
+        guard countdown.phase != .running && countdown.phase != .paused else { return }
         let base = countdown.phase == .finished ? countdown.configuredSeconds : seconds
-        setSeconds(min(Countdown.maximumSeconds, base + minutes * 60))
+        if minutes < 0 {
+            // Taking time off never ends the timer: it stops at one minute.
+            guard base > 60 else { return }
+            setSeconds(max(60, base + minutes * 60))
+        } else {
+            setSeconds(min(Countdown.maximumSeconds, base + minutes * 60))
+        }
+    }
+
+    var canSubtract: Bool {
+        (countdown.phase == .finished ? countdown.configuredSeconds : seconds) > 60
     }
 
     private func changed(requestPermission: Bool = false) {

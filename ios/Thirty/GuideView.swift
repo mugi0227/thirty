@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import LocalAuthentication
 
 /// First launch: what Thirty is, then the optional Guided Access setup.
@@ -127,8 +128,21 @@ struct OnboardingGuide: View {
                     SettingsMockRow(title: "パスコード設定", accessory: .chevron)
                 }
                 .padding(.top, 12)
+                // iOS has no public link straight to Guided Access, so this opens
+                // Settings (at Thirty's page) and the hint says where to go next.
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                } label: {
+                    Label("設定を開く", systemImage: "gearshape").font(.system(size: 15, weight: .semibold))
+                        .padding(.horizontal, 18).frame(minHeight: 44)
+                        .overlay(Capsule().stroke(Color.primary.opacity(0.2), lineWidth: 1.5))
+                }
+                .buttonStyle(SoftPressStyle())
+                .padding(.top, 16)
+                Text("開いたら左上の「＜」で設定のトップに戻り、\nアクセシビリティ → アクセスガイド へ。")
+                    .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).padding(.top, 6)
                 Link("Appleの説明を見る", destination: URL(string: "https://support.apple.com/ja-jp/111795")!)
-                    .font(.footnote).foregroundStyle(.secondary).frame(minHeight: 44).padding(.top, 8)
+                    .font(.footnote).foregroundStyle(.secondary).frame(minHeight: 44)
             case .biometry:
                 titleBlock(eyebrow: "STEP 2 ・ 任意", title: "解除は\(biometry)で",
                            body: "パスコード設定で\(biometry)をオンにすると、\n終わったあとの解除がかんたんです。")

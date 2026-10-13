@@ -105,6 +105,25 @@ def compose(raw_path, out_path):
     ImageDraw.Draw(canvas).rounded_rectangle((x - border, y - border, x + shot.width + border, y + shot.height + border),
                                              radius=radius + border, fill=INK)
     canvas.alpha_composite(framed, (x, y))
+    # On the Lock Screen image, a zoomed Dynamic Island shows where the timer
+    # also appears while another app is open.
+    island_path = raw_path.with_name("06-dynamic-island.png")
+    if raw_path.stem == "06-lock-screen" and island_path.exists():
+        island_raw = Image.open(island_path).convert("RGB")
+        strip = island_raw.crop((0, 0, island_raw.width, int(island_raw.height * 0.115)))
+        zoom = (shot.width * 1.08) / strip.width
+        strip = strip.resize((int(strip.width * zoom), int(strip.height * zoom)), Image.LANCZOS)
+        sx, sy = (width - strip.width) // 2, y + int(shot.height * 0.30)
+        glow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        ImageDraw.Draw(glow).rounded_rectangle((sx, sy + int(18 * scale), sx + strip.width, sy + strip.height + int(18 * scale)),
+                                               radius=int(strip.height * 0.3), fill=(0, 0, 0, 110))
+        canvas = Image.alpha_composite(canvas, glow.filter(ImageFilter.GaussianBlur(int(30 * scale))))
+        ImageDraw.Draw(canvas).rounded_rectangle((sx - border, sy - border, sx + strip.width + border, sy + strip.height + border),
+                                                 radius=int(strip.height * 0.3), fill=INK)
+        canvas.alpha_composite(rounded(strip, int(strip.height * 0.3)), (sx, sy))
+        label_font = font("regular", int(40 * scale))
+        ImageDraw.Draw(canvas).text((width / 2, sy + strip.height + int(56 * scale)), "ほかのアプリを使っていても、画面上部に",
+                                    font=label_font, fill=(240, 240, 235), anchor="mt", stroke_width=int(6 * scale), stroke_fill=INK)
     canvas.convert("RGB").save(out_path, optimize=True)  # App Store rejects alpha channels
     print(out_path, canvas.size)
 

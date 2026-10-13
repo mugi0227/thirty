@@ -167,7 +167,10 @@ struct TimerView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
                     digits
-                    controls(compact: true).padding(.top, 20)
+                    if !chromeHidden {
+                        controls(compact: true).padding(.top, 20)
+                            .transition(.opacity)
+                    }
                     Spacer(minLength: 0)
                 }
                 .frame(width: max(240, size.width * 0.36))
@@ -175,8 +178,13 @@ struct TimerView: View {
         }
     }
 
+    /// Running or paused: the time can no longer be changed.
+    private var timing: Bool {
+        model.countdown.phase == .running || model.countdown.phase == .paused
+    }
+
     private var digits: some View {
-        Button { lastTouch = Date(); showTime = true } label: {
+        Button { lastTouch = Date(); if !timing { showTime = true } } label: {
             SevenSegmentTime(text: model.timeText).opacity(blinkOpacity)
                 .overlay(alignment: .topLeading) {
                     if model.isBreak {
@@ -187,7 +195,7 @@ struct TimerView: View {
                 }
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel("時間を変更")
+        .accessibilityLabel(timing ? "残り時間" : "時間を変更")
         .accessibilityValue(model.countdown.phase == .paused ? "\(model.remainingLabel)、一時停止中" : model.remainingLabel)
     }
 
@@ -267,10 +275,16 @@ struct TimerView: View {
 
     private func timingControls(compact: Bool) -> some View {
         VStack(spacing: compact ? 12 : 18) {
+            // Time is set before starting; once a session is under way it stays as it is.
             HStack(spacing: 12) {
+                increment(-10)
+                increment(-1)
                 increment(1)
                 increment(10)
             }
+            .opacity(timing ? 0 : 1)
+            .allowsHitTesting(!timing)
+            .accessibilityHidden(timing)
             HStack(spacing: 20) {
                 if model.countdown.phase != .ready {
                     Button { lastTouch = Date(); model.reset(); showHint = false } label: {
@@ -330,16 +344,18 @@ struct TimerView: View {
 
     private func increment(_ minutes: Int) -> some View {
         Button { lastTouch = Date(); model.addMinutes(minutes) } label: {
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text("+\(minutes)").font(.system(size: 18, weight: .semibold).monospacedDigit())
-                Text("分").font(.system(size: 12)).opacity(0.7)
+            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                Text(minutes > 0 ? "+\(minutes)" : "−\(-minutes)").font(.system(size: 17, weight: .semibold).monospacedDigit())
+                Text("分").font(.system(size: 11)).opacity(0.7)
             }
-            .frame(minWidth: 72, minHeight: 44).padding(.horizontal, 6)
+            .frame(minWidth: 60, minHeight: 44).padding(.horizontal, 2)
             .overlay(Capsule().stroke(skin.line, lineWidth: 1.5))
             .contentShape(Capsule())
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel("\(minutes)分追加")
+        .disabled(minutes < 0 && !model.canSubtract)
+        .opacity(minutes < 0 && !model.canSubtract ? 0.3 : 1)
+        .accessibilityLabel(minutes > 0 ? "\(minutes)分追加" : "\(-minutes)分減らす")
     }
 
     private func iconButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
