@@ -37,13 +37,14 @@ jobs:
         run: |
           mkdir -p ../localization-screenshots
           for device in 'iPhone 17' 'iPad Pro 13-inch (M5)'; do
-            udid=$(../scripts/ci/boot_sim.sh "$device" | tail -1)
+            udid=$(python3 ../scripts/ci/boot_localization_sim.py "$device" | tail -1)
             slug=$(echo "$device" | tr -cs '[:alnum:]' '-')
             mkdir -p "../localization-screenshots/$slug"
             TEST_RUNNER_SCREENSHOT_DIR="$PWD/../localization-screenshots/$slug" \
               xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
               -destination "id=$udid" -derivedDataPath ../build-sim \
               -parallel-testing-enabled NO \
+              -maximum-test-execution-time-allowance 180 \
               -only-testing:ThirtyUITests/LocalizationTests \
               CODE_SIGNING_ALLOWED=NO test-without-building \
               > "../localization-$slug.log" 2>&1

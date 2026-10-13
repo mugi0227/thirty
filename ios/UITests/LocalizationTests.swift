@@ -32,7 +32,7 @@ final class LocalizationTests: XCTestCase {
         shot(language + "-01-welcome")
         app.buttons[next].tap()
         XCTAssertTrue(app.buttons[english ? "Open Settings" : "設定を開く"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts[english ? "Guided Access" : "アクセスガイド"].firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", english ? "Guided Access" : "アクセスガイド")).firstMatch.exists)
         shot(language + "-02-guided-access")
         app.buttons[next].tap()
         shot(language + "-03-biometry")
