@@ -20,7 +20,7 @@ else:
     udid = subprocess.check_output(['xcrun', 'simctl', 'create', name, kind, runtime], text=True).strip()
 print(f'Booting {name} on {runtime}', file=sys.stderr, flush=True)
 subprocess.run(['xcrun', 'simctl', 'boot', udid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-subprocess.run(['xcrun', 'simctl', 'bootstatus', udid, '-b'], check=True, timeout=180, stdout=sys.stderr)
+subprocess.run(['xcrun', 'simctl', 'bootstatus', udid, '-b'], check=True, timeout=300, stdout=sys.stderr)
 subprocess.run(['xcrun', 'simctl', 'ui', udid, 'appearance', 'light'], check=True)
 subprocess.run(['xcrun', 'simctl', 'status_bar', udid, 'override', '--time', '9:41', '--batteryState', 'charged', '--batteryLevel', '100'])
 print(udid)

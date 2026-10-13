@@ -143,7 +143,7 @@ struct LockScreenTimer: View {
                 if context.state.isBreak {
                     Text(String(localized: "休憩")).font(.caption.weight(.semibold))
                 } else if context.state.deadline == nil {
-                    Text(String(localized: "一時停止")).font(.caption.weight(.semibold))
+                    Text(String(localized: "一時停止中")).font(.caption.weight(.semibold))
                 }
                 ActivityTime(state: context.state).font(.system(size: 36, weight: .light, design: .monospaced))
             }

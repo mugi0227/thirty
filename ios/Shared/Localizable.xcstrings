@@ -1276,6 +1276,23 @@
         }
       }
     },
+    "一時停止中": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止中"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
+          }
+        }
+      }
+    },
     "伏せたら画面を消す": {
       "extractionState": "manual",
       "localizations": {

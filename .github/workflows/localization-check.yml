@@ -6,6 +6,9 @@ on:
       - codex/japanese-english
 permissions:
   contents: read
+concurrency:
+  group: localization-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   check:
     runs-on: macos-15
