@@ -1,0 +1,3 @@
+"${applicationName}をスタート" = "Start ${applicationName}";
+"${applicationName}で30分" = "Start 30 minutes in ${applicationName}";
+"Start ${applicationName}" = "Start the timer in ${applicationName}";

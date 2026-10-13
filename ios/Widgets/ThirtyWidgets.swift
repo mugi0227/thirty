@@ -59,7 +59,7 @@ struct StartWidgetView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "play.circle.fill").font(.title2)
                     VStack(alignment: .leading) {
-                        Text("30分スタート").font(.headline)
+                        Text(String(localized: "30分スタート")).font(.headline)
                         Text("Thirty").font(.caption)
                     }
                 }
@@ -88,7 +88,7 @@ struct StartControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "jp.mugilab.thirty.control.start") {
             ControlWidgetButton(action: StartTimerIntent(minutes: 30)) {
-                Label("30分スタート", systemImage: "timer")
+                Label(String(localized: "30分スタート"), systemImage: "timer")
             }
         }
         .displayName("30分スタート")
@@ -141,9 +141,9 @@ struct LockScreenTimer: View {
             Rectangle().fill(colors.ink.opacity(0.16)).frame(width: 1.5)
             VStack(alignment: .trailing, spacing: 2) {
                 if context.state.isBreak {
-                    Text("休憩").font(.caption.weight(.semibold))
+                    Text(String(localized: "休憩")).font(.caption.weight(.semibold))
                 } else if context.state.deadline == nil {
-                    Text("一時停止").font(.caption.weight(.semibold))
+                    Text(String(localized: "一時停止")).font(.caption.weight(.semibold))
                 }
                 ActivityTime(state: context.state).font(.system(size: 36, weight: .light, design: .monospaced))
             }

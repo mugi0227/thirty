@@ -58,11 +58,11 @@ enum EndSound: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .chime: return "チャイム"
-        case .beep: return "ピピピ（キッチンタイマー）"
-        case .bell: return "ベル"
-        case .soft: return "やさしい音"
-        case .vibrate: return "振動のみ"
+        case .chime: return String(localized: "チャイム")
+        case .beep: return String(localized: "ピピピ（キッチンタイマー）")
+        case .bell: return String(localized: "ベル")
+        case .soft: return String(localized: "やさしい音")
+        case .vibrate: return String(localized: "振動のみ")
         }
     }
     var isFree: Bool { self == .chime }
@@ -74,9 +74,9 @@ enum HardwareButton: String {
     case side, top, home
     var title: String {
         switch self {
-        case .side: return "サイドボタン"
-        case .top: return "トップボタン"
-        case .home: return "ホームボタン"
+        case .side: return String(localized: "サイドボタン")
+        case .top: return String(localized: "トップボタン")
+        case .home: return String(localized: "ホームボタン")
         }
     }
     // Safe-area inference avoids a model-ID list, including future devices.

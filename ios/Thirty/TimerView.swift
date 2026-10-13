@@ -188,15 +188,15 @@ struct TimerView: View {
             SevenSegmentTime(text: model.timeText).opacity(blinkOpacity)
                 .overlay(alignment: .topLeading) {
                     if model.isBreak {
-                        Text("休憩").font(.system(size: 13, weight: .bold)).padding(.horizontal, 8).padding(.vertical, 3)
+                        Text(String(localized: "休憩")).font(.system(size: 13, weight: .bold)).padding(.horizontal, 8).padding(.vertical, 3)
                             .foregroundStyle(skin.lcd).background(skin.ink, in: Capsule())
                             .offset(y: -22)
                     }
                 }
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel(timing ? "残り時間" : "時間を変更")
-        .accessibilityValue(model.countdown.phase == .paused ? "\(model.remainingLabel)、一時停止中" : model.remainingLabel)
+        .accessibilityLabel(timing ? String(localized: "残り時間") : String(localized: "時間を変更"))
+        .accessibilityValue(model.countdown.phase == .paused ? String(localized: "\(model.remainingLabel)、一時停止中") : model.remainingLabel)
     }
 
     /// LCD-style blink when finished, and a slower one while paused.
@@ -217,23 +217,23 @@ struct TimerView: View {
                 guideStart = model.isGuidedAccessActive ? .triple : .enable
             }
             Spacer()
-            iconButton("paintpalette", label: "スキン") {
+            iconButton("paintpalette", label: String(localized: "スキン")) {
                 lastTouch = Date()
                 showSkins = true
             }
-            iconButton(model.dimScreen ? "moon.fill" : "moon", label: "画面を暗くする") {
+            iconButton(model.dimScreen ? "moon.fill" : "moon", label: String(localized: "画面を暗くする")) {
                 lastTouch = Date()
                 model.dimScreen.toggle()
             }
-            .accessibilityValue(model.dimScreen ? "オン" : "オフ")
+            .accessibilityValue(model.dimScreen ? String(localized: "オン") : String(localized: "オフ"))
             if orientation.canForce {
                 iconButton(landscape ? "iphone" : "arrow.up.left.and.arrow.down.right",
-                           label: landscape ? "縦向きに戻す" : "横向きにする") {
+                           label: landscape ? String(localized: "縦向きに戻す") : String(localized: "横向きにする")) {
                     lastTouch = Date()
                     orientation.toggle(isLandscape: landscape)
                 }
             }
-            iconButton("gearshape", label: "設定") {
+            iconButton("gearshape", label: String(localized: "設定")) {
                 lastTouch = Date()
                 showSettings = true
             }
@@ -256,7 +256,7 @@ struct TimerView: View {
     private func finishedControls(compact: Bool) -> some View {
         VStack(spacing: compact ? 10 : 14) {
             Button { lastTouch = Date(); model.again() } label: {
-                Text("もう\(model.lastMinutes)分").font(.system(size: 18, weight: .bold))
+                Text(String(localized: "もう\(model.lastMinutes)分")).font(.system(size: 18, weight: .bold))
                     .frame(minWidth: 180, minHeight: compact ? 52 : 60)
                     .padding(.horizontal, 12)
                     .foregroundStyle(skin.lcd)
@@ -264,7 +264,7 @@ struct TimerView: View {
             }
             .buttonStyle(SoftPressStyle())
             Button { lastTouch = Date(); model.reset(); showHint = false } label: {
-                Text("おしまい").font(.system(size: 16, weight: .semibold))
+                Text(String(localized: "おしまい")).font(.system(size: 16, weight: .semibold))
                     .frame(minWidth: 140, minHeight: 44)
                     .overlay(Capsule().stroke(skin.line, lineWidth: 1.5))
             }
@@ -292,7 +292,7 @@ struct TimerView: View {
                             .frame(width: compact ? 48 : 56, height: compact ? 48 : 56)
                             .background(skin.soft, in: Circle())
                     }
-                    .buttonStyle(SoftPressStyle()).accessibilityLabel("終了")
+                    .buttonStyle(SoftPressStyle()).accessibilityLabel(String(localized: "終了"))
                 }
                 Button(action: primaryAction) {
                     Image(systemName: model.countdown.phase == .running ? "pause.fill" : "play.fill")
@@ -314,9 +314,9 @@ struct TimerView: View {
 
     private var primaryLabel: String {
         switch model.countdown.phase {
-        case .ready, .finished: return "開始"
-        case .running: return "一時停止"
-        case .paused: return "再開"
+        case .ready, .finished: return String(localized: "開始")
+        case .running: return String(localized: "一時停止")
+        case .paused: return String(localized: "再開")
         }
     }
 
@@ -346,7 +346,7 @@ struct TimerView: View {
         Button { lastTouch = Date(); model.addMinutes(minutes) } label: {
             HStack(alignment: .firstTextBaseline, spacing: 1) {
                 Text(minutes > 0 ? "+\(minutes)" : "−\(-minutes)").font(.system(size: 17, weight: .semibold).monospacedDigit())
-                Text("分").font(.system(size: 11)).opacity(0.7)
+                Text(String(localized: "分")).font(.system(size: 11)).opacity(0.7)
             }
             .frame(minWidth: 60, minHeight: 44).padding(.horizontal, 2)
             .overlay(Capsule().stroke(skin.line, lineWidth: 1.5))
@@ -355,7 +355,7 @@ struct TimerView: View {
         .buttonStyle(SoftPressStyle())
         .disabled(minutes < 0 && !model.canSubtract)
         .opacity(minutes < 0 && !model.canSubtract ? 0.3 : 1)
-        .accessibilityLabel(minutes > 0 ? "\(minutes)分追加" : "\(-minutes)分減らす")
+        .accessibilityLabel(minutes > 0 ? String(localized: "\(minutes)分追加") : String(localized: "\(-minutes)分減らす"))
     }
 
     private func iconButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
@@ -371,13 +371,13 @@ struct TimerView: View {
                 plusInvitationShown = true
                 showSkins = true
             } label: {
-                Label("気に入ったら、Thirty+ でスキンを", systemImage: "paintpalette")
+                Label(String(localized: "気に入ったら、Thirty+ でスキンを"), systemImage: "paintpalette")
                     .font(.system(size: 13, weight: .semibold)).frame(minHeight: 44)
             }
             Button { plusInvitationShown = true } label: {
                 Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).frame(width: 36, height: 44)
             }
-            .accessibilityLabel("閉じる")
+            .accessibilityLabel(String(localized: "閉じる"))
         }
         .padding(.leading, 14).padding(.trailing, 4)
         .overlay(Capsule().stroke(skin.line, lineWidth: 1.5))
@@ -398,7 +398,7 @@ struct LockChip: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: active ? "lock.fill" : "lock.open").font(.system(size: 13, weight: .semibold))
-                Text(active ? "ロック中" : "ロック").font(.system(size: 14, weight: .semibold))
+                Text(active ? String(localized: "ロック中") : String(localized: "ロック")).font(.system(size: 14, weight: .semibold))
             }
             .padding(.leading, 11).padding(.trailing, 14).frame(height: 36)
             .foregroundStyle(active ? skin.lcd : skin.ink)
@@ -407,7 +407,7 @@ struct LockChip: View {
             .frame(minHeight: 44).contentShape(Rectangle())
         }
         .buttonStyle(SoftPressStyle())
-        .accessibilityLabel(active ? "アクセスガイド実行中" : "アクセスガイドでロックする方法")
+        .accessibilityLabel(active ? String(localized: "アクセスガイド実行中") : String(localized: "アクセスガイドでロックする方法"))
     }
 }
 
@@ -491,11 +491,11 @@ struct ButtonHint: View {
                 Text(kind.title).font(.system(size: 10)).opacity(0.75).lineLimit(1).fixedSize()
             }
             Button(action: onClose) { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).frame(width: 36, height: 44) }
-                .accessibilityLabel("ボタンの案内を閉じる")
+                .accessibilityLabel(String(localized: "ボタンの案内を閉じる"))
         }
         .foregroundStyle(skin.lcd)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(kind.title)を3回連続で押すと、アクセスガイドでロックできます")
+        .accessibilityLabel(String(localized: "\(kind.title)を3回連続で押すと、アクセスガイドでロックできます"))
     }
 
     private func pulses(vertical: Bool) -> some View {
@@ -561,29 +561,29 @@ struct TimePickerView: View {
                                 .background(Color(uiColor: .secondarySystemGroupedBackground), in: Capsule())
                         }
                         .buttonStyle(SoftPressStyle())
-                        .accessibilityLabel("\(preset)分")
+                        .accessibilityLabel(String(localized: "\(preset)分"))
                     }
                 }
                 .padding(.horizontal, 20).padding(.top, 8)
                 HStack(spacing: 0) {
-                    Picker("分", selection: $minutes) {
+                    Picker(String(localized: "分"), selection: $minutes) {
                         ForEach(0...(Countdown.maximumSeconds / 60), id: \.self) { Text(String(format: "%02d", $0)).tag($0) }
-                    }.pickerStyle(.wheel).accessibilityLabel("分")
+                    }.pickerStyle(.wheel).accessibilityLabel(String(localized: "分"))
                     Text(":").font(.largeTitle)
-                    Picker("秒", selection: $seconds) {
+                    Picker(String(localized: "秒"), selection: $seconds) {
                         ForEach(0..<60, id: \.self) { Text(String(format: "%02d", $0)).tag($0) }
-                    }.pickerStyle(.wheel).accessibilityLabel("秒")
+                    }.pickerStyle(.wheel).accessibilityLabel(String(localized: "秒"))
                 }
                 .padding(.horizontal, 24)
             }
-            .navigationTitle("時間").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(String(localized: "時間")).navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel("キャンセル")
+                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel(String(localized: "キャンセル"))
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button { onSave(minutes * 60 + seconds); dismiss() } label: { Image(systemName: "checkmark") }
-                        .accessibilityLabel("時間を決定")
+                        .accessibilityLabel(String(localized: "時間を決定"))
                 }
             }
             .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())

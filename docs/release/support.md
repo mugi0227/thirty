@@ -21,3 +21,28 @@
 
 不具合やご要望は、GitHubのIssueでお知らせください。
 https://github.com/mugi0227/thirty/issues
+
+---
+
+# Thirty Support
+
+## Frequently asked questions
+
+**How do I start Guided Access?**
+In Settings → Accessibility → Guided Access, turn on Guided Access. With Thirty open, triple-click the side button on an iPhone without a Home button, the top button on an iPad without a Home button, or the Home button on a device with one.
+
+**How do I end Guided Access?**
+Click the same button three times, authenticate with your passcode, Face ID, or Touch ID, then tap End. On iOS 18 and earlier, you may need to double-click instead. Guided Access does not end automatically when the timer ends.
+
+**Why don't I hear the end sound?**
+When the app is closed, a notification lets you know. Enable notifications in Settings → Notifications → Thirty. Silent Mode and Focus settings also affect notification alerts.
+
+**How can I use Thirty+ on another device?**
+Use the same Apple Account and tap Restore purchases in Settings or on the Thirty+ purchase screen.
+
+**Why is my screen still dim?**
+Open and close the app once to restore the previous brightness. If necessary, adjust brightness in Control Center.
+
+## Contact
+
+Report issues or requests on [GitHub](https://github.com/mugi0227/thirty/issues).
