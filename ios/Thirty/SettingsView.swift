@@ -59,7 +59,7 @@ struct SettingsView: View {
                     if plus && model.cycleEnabled {
                         Stepper("休憩 \(model.breakMinutes)分", value: $model.breakMinutes, in: 1...30)
                     }
-                    plusToggle("ロック画面とStandByに表示", isOn: $model.liveActivityEnabled)
+                    plusToggle("閉じても残り時間を表示", isOn: $model.liveActivityEnabled)
                     plusPicker("棒の本数", selection: $model.slatCount) {
                         Text("30本").tag(30)
                         Text("60本" + (plus ? "" : " 🔒")).tag(60)
@@ -151,7 +151,7 @@ struct PlusView: View {
     @Environment(\.dismiss) private var dismiss
     private let perks: [(String, String, String)] = [
         ("paintpalette", "スキン", "アンバー、ナイトブルー、ルビーなど5種類"),
-        ("lock.iphone", "ロック画面とStandBy", "減っていく棒をロック画面やDynamic Islandにも。充電中に横置きすると置き時計に"),
+        ("lock.iphone", "閉じても、残りが見える", "ほかのアプリやロック画面でも、画面上部の黒い部分（Dynamic Island）やロック画面に、減っていく棒と残り時間が出ます。充電中に横置きすると置き時計にも（StandBy）"),
         ("bell", "終了音", "キッチンタイマーのピピピ、ベル、やさしい音、振動のみ"),
         ("arrow.triangle.2.circlepath", "休憩をはさんでくり返す", "30分→休憩5分→30分…を自動で"),
         ("app.badge", "アプリのアイコン", "スキンに合わせた5種類"),
