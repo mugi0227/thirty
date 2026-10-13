@@ -231,7 +231,10 @@ def main():
                 t = f / FPS
                 canvas = layout.base.copy()
                 if "still" in extras:
-                    zoom = 1 + 0.04 * t / duration
+                    # Keep the entire compact island (bars and time) in view.
+                    # Anchor the crop at the top and hold the final framing.
+                    progress = min(t / max(duration - 0.5, 0.5), 1.0)
+                    zoom = 1 + 0.5 * progress ** 2 * (3 - 2 * progress)
                     w, h = int(shot_w * zoom), int(SHOT_H * zoom)
                     image = still.resize((w, h), Image.LANCZOS).crop(((w - shot_w) // 2, 0, (w - shot_w) // 2 + shot_w, SHOT_H))
                 else:
