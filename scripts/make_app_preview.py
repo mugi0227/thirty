@@ -204,7 +204,7 @@ def main():
         ((finish - start - 3.5) / 2.2, start + 3.3, 2.2, "減っていく棒で、\n残りがひと目でわかる", "", {"badge": 0}),
     ]
     if island_path:
-        scenes.append((3.8, None, 0, "ほかのアプリの最中も", "画面の上に残り時間（Thirty+）", {"still": island_path}))
+        scenes.append((3.0, None, 0, "ほかのアプリの最中も", "画面の上に残り時間（Thirty+）", {"still": island_path}))
     scenes.append((min(4.8, (len(frames) / FPS) - finish), finish - 0.2, 1, "できても、できなくても",
                    "終わったら「もう30分」か「おしまい」", {"chime": 0.2}))
     end_seconds = 2.8
@@ -231,14 +231,12 @@ def main():
                 t = f / FPS
                 canvas = layout.base.copy()
                 if "still" in extras:
-                    # Hold the whole screen, then move in on the island so its
-                    # bars and time are readable.
-                    k = ease((t - 0.8) / 1.2)
-                    zoom = 1 + 0.6 * k
+                    # Keep the entire compact island (bars and time) in view.
+                    # Anchor the crop at the top and hold the final framing.
+                    progress = min(t / max(duration - 0.5, 0.5), 1.0)
+                    zoom = 1 + 0.5 * progress ** 2 * (3 - 2 * progress)
                     w, h = int(shot_w * zoom), int(SHOT_H * zoom)
-                    island_y = SHOT_H * 0.045
-                    top = int(max(0, island_y * zoom - (island_y + k * SHOT_H * 0.1)))
-                    image = still.resize((w, h), Image.LANCZOS).crop(((w - shot_w) // 2, top, (w - shot_w) // 2 + shot_w, top + SHOT_H))
+                    image = still.resize((w, h), Image.LANCZOS).crop(((w - shot_w) // 2, 0, (w - shot_w) // 2 + shot_w, SHOT_H))
                 else:
                     index = min(len(frames) - 1, max(0, round((src + t * speed) * FPS)))
                     image = Image.fromarray(frames[index])

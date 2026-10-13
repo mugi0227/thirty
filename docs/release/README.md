@@ -8,7 +8,7 @@
 | もの | 場所 | 状態 |
 | --- | --- | --- |
 | App Storeのスクリーンショット（キャプション付き） | [store/iphone-medium](store/iphone-medium/)（1206×2622、必須）、[store/iphone-large](store/iphone-large/)（1320×2868）、[store/ipad-13](store/ipad-13/)（2064×2752、必須）。CIの成果物 `store-*` からも取得可 | 撮影済み |
-| App プレビュー動画（886×1920、30fps、H.264、約28秒。デバッグ版で時間を100倍に早送り） | [store/app-preview-iphone-6.9.mp4](store/app-preview-iphone-6.9.mp4) | 録画済み |
+| App プレビュー動画（886×1920、30fps、H.264、約23.6秒。デバッグ版の早送り録画に見出し、Dynamic Islandの拡大、音を追加） | [store/app-preview-iphone-6.9.mp4](store/app-preview-iphone-6.9.mp4) | 編集済み |
 | 説明文、キーワード、サブタイトルなど | [metadata-ja.md](metadata-ja.md) | 下書き済み |
 | プライバシーポリシー | [privacy-policy.md](privacy-policy.md) | 下書き済み |
 | サポートページ | [support.md](support.md) | 下書き済み |
@@ -26,7 +26,7 @@
   - iPad 13インチ：2064×2752 など。**iPadで動くので必須**（iPad Pro 13-inch (M5)）。
   - 1サイズあたり1〜10枚、JPEG/PNG、透明なし。小さいサイズは自動で縮小されます。
 - **iPhone Duo**：外側 1398×2034、内側 2007×2853。**2027年4月から、iOS 27.1 SDK以降でビルドするアプリで必須**。今の提出（iOS 26 SDK）では不要です。GitHubのXcode 27イメージにDuoのSimulatorがあるかをCIで調べています（下記）。
-- **App プレビュー動画**：任意。15〜30秒、30fps以下、H.264、iPhone 6.9インチとiPhone Duoは886×1920。音声はステレオが必要なので無音のステレオトラックを付けています。
+- **App プレビュー動画**：任意。15〜30秒、30fps以下、H.264、iPhone 6.9インチとiPhone Duoは886×1920。今回はステレオの背景音、開始操作の音、アプリの終了音を付けています。
 - **年齢制限**：新しい質問票（4+／9+／13+／16+／18+）。Thirtyはすべて「なし」で4+になる想定です。
 - **アクセシビリティ（Nutrition Labels）**：現在は任意。実機で確認できた項目だけ申告してください。
 
@@ -34,18 +34,21 @@
 
 1. **Apple Developer Program** に登録（年会費あり）。
 2. App Store Connectの「契約／税金／口座情報」で **有料App契約** を有効にする（App内課金に必要）。税と銀行口座も登録。
-3. **App IDを作る**：`jp.mugilab.thirty`（App）と `jp.mugilab.thirty.widgets`（ウィジェット拡張）。Xcodeの自動署名でも作られます。
+3. **App IDを作る**：`jp.mugilab.thirty`（App）と `jp.mugilab.thirty.widgets`（ウィジェット拡張）。本体は明示的なIDでIn-App Purchaseを有効にします。
 4. App Store Connectで **新規App** を作成。名前は [metadata-ja.md](metadata-ja.md) の案、プライマリ言語は日本語、Bundle IDは上記。
 5. **App内課金を作成**：非消耗型、製品ID `jp.mugilab.thirty.plus`、価格は¥500。表示名と説明、審査用スクリーンショット（Thirty+の画面）は [review-notes.md](review-notes.md)。
 6. **署名してアップロード（Macなし、GitHub Actionsで）**
-   1. App Store Connect →「ユーザとアクセス」→「統合」→「App Store Connect API」→「チームキー」で「＋」。名前は自由、アクセスは **Admin**（Appleのクラウド署名を使うため）。
+   1. App Store Connect →「ユーザとアクセス」→「統合」→「App Store Connect API」→「チームキー」で「＋」。名前は自由、アクセスは **Admin**（配布用プロファイルの取得・作成に使います）。
    2. 作成後に一度だけダウンロードできる `AuthKey_XXXXXXXXXX.p8` を保存。画面に出る **キーID** と、一覧の上の **Issuer ID** も控える。
-   3. GitHubのリポジトリ →「Settings」→「Secrets and variables」→「Actions」→「New repository secret」で3つ登録。
+   3. GitHubのリポジトリ →「Settings」→「Secrets and variables」→「Actions」→「New repository secret」で、APIキー3つと配布用署名2つを登録（2026/10/13時点では登録済み）。
       - `ASC_KEY_ID`：キーID
       - `ASC_ISSUER_ID`：Issuer ID
       - `ASC_KEY_P8`：.p8ファイルをテキストで開いた中身すべて（`-----BEGIN PRIVATE KEY-----` から最後の行まで）
-   4. 「Actions」→「Upload to App Store Connect」→「Run workflow」。約15〜25分でTestFlightにビルドが届きます。ビルド番号はワークフローの実行番号で自動的に増えます。
-   - 署名証明書やプロビジョニングプロファイルを手で作る必要はありません（Xcodeのクラウド署名）。
+      - `THIRTY_SIGNING_P12`：既存の配布用証明書と秘密鍵を含む、暗号化したPKCS#12のBase64
+      - `THIRTY_SIGNING_PASSWORD`：PKCS#12のパスワード
+   4. 「Actions」→「Upload to App Store Connect」→「Run workflow」。アップロードとAppleの処理が終わるとTestFlightにビルドが届きます。ビルド番号はワークフローの実行番号で自動的に増えます。
+   - CIは既存の配布用署名を再利用し、本体とウィジェットに合うApp Store用プロファイルを取得・作成します。新しい証明書の発行や既存証明書の失効は行いません。
+   - 署名を更新する場合は、`scripts/ci/install_signing.py` の証明書ID・指紋と上の署名Secrets、対応するプロファイルを合わせて更新します。秘密鍵・パスワードはGitに入れません。
    - 先にApp Store Connectで「新規App」を作っておかないと、アップロードは失敗します。
    - Macがある場合は、`cd ios && xcodegen generate` のあとXcodeで Product > Archive → Distribute App でも同じです。
 7. **TestFlightで実機確認**。特に次の項目：
@@ -71,4 +74,10 @@ CIの `iphone-duo` ジョブは、Duoに対応したランタイムが入って�
 - 計測中の画面は、開始直後に時計を進める（デバッグ版だけの `-ThirtyJumpAfterStart`）ことで、毎回同じくらいの残り時間で撮れます。
 - `scripts/make_store_screenshots.py` が見出しを付けます。書体は日本語の **Zen Kaku Gothic New**（`STORE_FONT=mincho` で **Zen Old Mincho**）。どちらもOFLで、`scripts/fetch_fonts.sh` が取得します。中国語用の書体に切り替わって字形が変わることはありません。
 - 横向きの画面は、横長のストア画像（例：2622×1206）として出力します。
-- ロック画面の画像は、時計とライブアクティビティの部分だけを切り出し、Simulatorのホーム画面やテスト用のアイコンが写らないようにしています。
+- ロック画面は画面全体を撮影します。Dynamic Islandは設定アプリの上に出ている通常のコンパクト表示を別の画像にし、ホーム画面のアイコンが入らないようにしています。
+
+## 2026年10月13日の動画と画像の更新
+
+[検証記録](preview-verification-20261013.md)に、使用したCIの録画と画像、動画の再生成手順、確認結果を記録しています。
+Dynamic Islandの場面では上端を固定して最大1.5倍まで拡大し、最後の0.5秒はその倍率を維持します。
+棒と残り時間を画面内に収めるため、拡大するのはこの場面だけです。

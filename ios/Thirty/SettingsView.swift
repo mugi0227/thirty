@@ -213,13 +213,22 @@ struct PlusBuyButtons: View {
         VStack(spacing: 8) {
             Button {
                 Task {
-                    await store.purchase()
-                    if store.hasPlus { onPurchased() }
+                    if store.product == nil {
+                        await store.reloadProduct()
+                    } else {
+                        await store.purchase()
+                        if store.hasPlus { onPurchased() }
+                    }
                 }
             } label: {
                 Group {
-                    if store.isBusy { ProgressView() } else {
-                        Text(store.product == nil ? "Thirty+ を購入" : "\(store.priceText)で購入").font(.headline)
+                    if store.isBusy || store.isLoadingProducts {
+                        HStack {
+                            ProgressView()
+                            Text(store.isLoadingProducts ? "商品情報を読み込み中…" : "処理中…")
+                        }
+                    } else {
+                        Text(store.product == nil ? "商品情報を読み直す" : "\(store.priceText)で購入").font(.headline)
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 52)
@@ -227,14 +236,22 @@ struct PlusBuyButtons: View {
                 .background(TimerTheme.accent, in: Capsule())
             }
             .buttonStyle(SoftPressStyle())
-            .disabled(store.isBusy)
+            .disabled(store.isBusy || store.isLoadingProducts)
             Text("買い切りです。定期購入ではありません。").font(.caption).foregroundStyle(.secondary)
             Button("購入を復元") { Task { await store.restore() } }
                 .font(.footnote).frame(minHeight: 44).disabled(store.isBusy)
-            if let message = store.message {
+            if let message = store.message ?? store.productLoadFailure {
                 Text(message).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
+            if let details = store.diagnosticMessage {
+                DisclosureGroup("詳しい情報") {
+                    Text(details).font(.caption).textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .font(.footnote)
+            }
         }
+        .task { if store.product == nil { await store.load() } }
     }
 }
 

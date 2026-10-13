@@ -1,0 +1,26 @@
+name: Check purchase retry
+on:
+  push:
+    branches:
+      - codex/purchase-retry
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Test retry after empty response and failure
+        working-directory: ios
+        run: swift test
+      - name: Generate Xcode project
+        working-directory: ios
+        run: brew install xcodegen && xcodegen generate
+      - name: Compile the Release app and widget
+        working-directory: ios
+        run: >-
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Release
+          -sdk iphoneos -destination 'generic/platform=iOS'
+          -derivedDataPath ../build CODE_SIGNING_ALLOWED=NO build -quiet
