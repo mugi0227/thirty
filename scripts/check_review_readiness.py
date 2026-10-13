@@ -79,11 +79,17 @@ for purchase in purchases:
             if name == 'versions':
                 purchase_version_ids.update(obj['id'] for obj in objects)
             if name == 'iapPriceSchedule' and objects:
-                prices = related(objects[0], 'manualPrices').get('data', [])
+                schedule = objects[0]
+                response = get(f"/v1/inAppPurchasePriceSchedules/{schedule['id']}/manualPrices",
+                               include='inAppPurchasePricePoint', limit=200)
+                prices = response.get('data', [])
+                points = {obj['id']: obj for obj in response.get('included', []) if obj['type'] == 'inAppPurchasePricePoints'}
                 item['manual_prices'] = []
                 for price in prices:
-                    point = related(price, 'inAppPurchasePricePoint').get('data')
-                    territory = related(point, 'territory').get('data') if point else None
+                    point_id = (price.get('relationships', {}).get('inAppPurchasePricePoint', {}).get('data') or {}).get('id')
+                    point = points.get(point_id)
+                    territory = (point.get('relationships', {}).get('territory', {}).get('data') or
+                                 point.get('attributes', {}).get('territory', {}).get('data')) if point else None
                     if territory and territory['id'] == 'JPN':
                         item['japan_price'] = point['attributes'] if point else None
                     item['manual_prices'].append({'territory': territory['id'] if territory else None,
@@ -110,6 +116,11 @@ for submission in submissions:
                    'includes_thirty_plus': (item.get('relationships', {}).get('inAppPurchaseVersion', {}).get('data') or {}).get('id') in purchase_version_ids}
                   for item in items]})
 report['app_relationships'] = list(app.get('relationships', {}))
+bundles = get('/v1/bundleIds', **{'filter[identifier]': config['bundle_id'], 'limit': 10}).get('data', [])
+report['bundle_id_capabilities'] = []
+for bundle in bundles:
+    capabilities = related(bundle, 'bundleIdCapabilities').get('data', [])
+    report['bundle_id_capabilities'] += [obj['attributes'] for obj in capabilities]
 relation = app.get('relationships', {}).get('appAvailabilityV2', {})
 linkage_url = relation.get('links', {}).get('self')
 if linkage_url and linkage_url.startswith(API + '/'):
