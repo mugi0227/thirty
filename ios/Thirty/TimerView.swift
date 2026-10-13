@@ -465,12 +465,15 @@ struct ButtonHint: View {
         GeometryReader { geometry in
             let point = normalizedLocation
             let vertical = point.y == 0 || point.y == 1
-            let size = CGSize(width: 136, height: 52)
+            // Along the top or bottom edge the dots sit beside the text, so the
+            // tab is wider, and taller to clear the screen edge and home indicator.
+            let size = vertical ? CGSize(width: 184, height: 68) : CGSize(width: 136, height: 52)
             let x = point.x == 0 ? size.width / 2 : point.x == 1 ? geometry.size.width - size.width / 2
                 : min(geometry.size.width - size.width / 2, max(size.width / 2, point.x * geometry.size.width))
             let y = point.y == 0 ? size.height / 2 : point.y == 1 ? geometry.size.height - size.height / 2
                 : min(geometry.size.height - size.height / 2, max(size.height / 2, point.y * geometry.size.height))
             content(vertical: vertical)
+                .padding(point.y == 1 ? .bottom : .top, vertical ? 14 : 0)
                 .frame(width: size.width, height: size.height)
                 .background(skin.ink, in: edgeShape(point))
                 .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
