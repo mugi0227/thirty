@@ -40,7 +40,7 @@
 6. **署名してアップロード**
    ```sh
    cd ios
-   DEVELOPMENT_TEAM=あなたのチームID xcodegen generate
+   xcodegen generate   # チームID 572NVCGLGQ は project.yml に設定済み
    open Thirty.xcodeproj   # Product > Archive → Distribute App → App Store Connect
    ```
 7. **TestFlightで実機確認**。特に次の項目：

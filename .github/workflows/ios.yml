@@ -13,8 +13,6 @@ concurrency:
   cancel-in-progress: true
 permissions:
   contents: read
-env:
-  DEVELOPMENT_TEAM: ''
 jobs:
   build:
     runs-on: macos-26

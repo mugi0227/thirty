@@ -9,8 +9,8 @@ settings:
     SWIFT_VERSION: '5.0'
     MARKETING_VERSION: '1.0.0'
     CURRENT_PROJECT_VERSION: '1'
-    # Set DEVELOPMENT_TEAM in the environment before `xcodegen generate` to sign for release.
-    DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+    # Apple Developer team (Membership details). Not a secret.
+    DEVELOPMENT_TEAM: 572NVCGLGQ
     CODE_SIGN_STYLE: Automatic
 fileGroups:
   - Thirty.storekit
