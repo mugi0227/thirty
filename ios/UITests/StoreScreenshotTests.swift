@@ -111,14 +111,12 @@ final class StoreScreenshotTests: XCTestCase {
             for label in ["許可", "Allow"] where springboard.buttons[label].waitForExistence(timeout: 1) {
                 springboard.buttons[label].tap()
             }
-            // The island over another app, where it really sits, with no
-            // home screen icons in the picture.
+            // The island over another app, at its real place and size, with
+            // no home screen icons in the picture.
             let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
             settings.activate()
             sleep(3)
-            springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.03)).press(forDuration: 1.2)
-            sleep(2)
-            shot("07-dynamic-island")
+            shot("07-dynamic-island") // compact, as it normally sits
             XCUIDevice.shared.press(.home)
             sleep(2)
             // The Lock Screen shows the Live Activity without any home screen icons.

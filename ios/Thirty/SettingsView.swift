@@ -238,22 +238,24 @@ struct PlusBuyButtons: View {
     }
 }
 
-/// A picture of the Live Activity in the Dynamic Island, so "the black area
-/// at the top of the screen" is clear before buying.
+/// A picture of the Live Activity in the Dynamic Island, at about its real
+/// size, so "the black area at the top of the screen" is clear before buying.
 struct IslandSample: View {
     private let amber = LCDPalette.colors(for: "amber").ink
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
             HStack(spacing: 2) {
-                ForEach(0..<24, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 1).fill(index < 17 ? amber : amber.opacity(0.15)).frame(width: 3)
+                ForEach(0..<6, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 1).fill(index < 4 ? amber : amber.opacity(0.2)).frame(width: 3.5)
                 }
             }
-            .frame(height: 24)
-            Text("21:47").font(.system(size: 20, weight: .light, design: .monospaced)).foregroundStyle(amber)
+            .frame(height: 15)
+            Spacer(minLength: 0)
+            Text("21:47").font(.system(size: 14, weight: .medium, design: .monospaced)).foregroundStyle(amber)
         }
-        .padding(.horizontal, 18).padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .frame(width: 230, height: 37)
         .background(Color.black, in: Capsule())
         .accessibilityHidden(true)
     }
