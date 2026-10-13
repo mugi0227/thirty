@@ -1,6 +1,9 @@
 name: Check Japanese and English
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - codex/japanese-english
 permissions:
   contents: read
 jobs:
