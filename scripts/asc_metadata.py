@@ -219,20 +219,27 @@ def prepare_review(client, app_id, version, version_string):
         infos = client.get(f"/v1/apps/{app_id}/appInfos")["data"]
         info = next((i for i in infos if i["attributes"].get("appStoreState") != "READY_FOR_SALE"), infos[0])
         declaration = client.get(f"/v1/appInfos/{info['id']}/ageRatingDeclaration")["data"]
-        skipped = []
-        # One field at a time: Apple adds and retires questions, and an unknown
-        # field would otherwise reject all the answers.
-        for key, value in [(k, "NONE") for k in AGE_RATING_NONE] + [(k, False) for k in AGE_RATING_FALSE]:
+        answers = {**{k: "NONE" for k in AGE_RATING_NONE}, **{k: False for k in AGE_RATING_FALSE}}
+        # Apple wants every answer in one request; drop a field it no longer
+        # knows and try again.
+        for _ in range(len(answers)):
             try:
                 client.patch(f"/v1/ageRatingDeclarations/{declaration['id']}", {"data": {
-                    "type": "ageRatingDeclarations", "id": declaration["id"], "attributes": {key: value}}})
-            except requests.HTTPError:
-                skipped.append(key)
-        print(f"  age rating: none{' (not accepted: ' + ', '.join(skipped) + ')' if skipped else ''}")
+                    "type": "ageRatingDeclarations", "id": declaration["id"], "attributes": answers}})
+                break
+            except requests.HTTPError as error:
+                unknown = [e["source"]["pointer"].rsplit("/", 1)[-1] for e in error.response.json().get("errors", [])
+                           if e.get("code", "").startswith("ENTITY_ERROR.ATTRIBUTE.") and "REQUIRED" not in e["code"]
+                           and e.get("source", {}).get("pointer", "").rsplit("/", 1)[-1] in answers]
+                if not unknown:
+                    raise
+                for key in unknown:
+                    answers.pop(key)
+        print("  age rating: none")
 
     def price():
         try:
-            current = client.get(f"/v1/apps/{app_id}/appPriceSchedule/manualPrices").get("data")
+            current = client.get(f"/v1/appPriceSchedules/{app_id}/manualPrices").get("data")
         except requests.HTTPError:
             current = None
         if current:
