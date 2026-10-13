@@ -53,6 +53,8 @@ targets:
       path: Widgets/Info.plist
       properties:
         CFBundleDisplayName: Thirty
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -80,6 +82,8 @@ targets:
       path: Thirty/Info.plist
       properties:
         CFBundleDisplayName: Thirty
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
         UIApplicationSupportsIndirectInputEvents: true
         ITSAppUsesNonExemptEncryption: false

@@ -28,7 +28,7 @@ jobs:
       TEAM_ID: 572NVCGLGQ
       BUILD_NUMBER: ${{ github.run_number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check secrets
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -65,6 +65,13 @@ jobs:
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             archive | tee "$RUNNER_TEMP/archive.log" | grep -E "error:|warning: .*sign|ARCHIVE (SUCCEEDED|FAILED)" || true
           test -d "$RUNNER_TEMP/Thirty.xcarchive"
+          # Fail early if the build number did not reach the bundles.
+          for plist in "$RUNNER_TEMP/Thirty.xcarchive/Products/Applications/Thirty.app/Info.plist" \
+                       "$RUNNER_TEMP/Thirty.xcarchive/Products/Applications/Thirty.app/PlugIns/"*.appex/Info.plist; do
+            version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$plist")
+            echo "$plist: $version"
+            test "$version" = "$BUILD_NUMBER"
+          done
       - name: Export and upload
         working-directory: ios
         env:
@@ -93,7 +100,7 @@ jobs:
       - name: Remove the key
         if: always()
         run: rm -rf "$RUNNER_TEMP/keys"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: release-logs
