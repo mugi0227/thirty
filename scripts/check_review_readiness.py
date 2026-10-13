@@ -145,6 +145,11 @@ if target_build:
             ('version', 'processingState', 'expired', 'uploadedDate')} if target else None
         print(json.dumps({'target_build': report['target_build']}), flush=True)
         if target and target['attributes'].get('processingState') in ('VALID', 'FAILED', 'INVALID'):
+            beta_detail = get(f"/v1/builds/{target['id']}/buildBetaDetail").get('data')
+            report['target_build_beta_detail'] = beta_detail['attributes'] if beta_detail else None
+            groups = get(f"/v1/builds/{target['id']}/betaGroups").get('data', [])
+            report['target_build_beta_groups'] = [{k: group['attributes'].get(k) for k in
+                ('name', 'isInternalGroup', 'hasAccessToAllBuilds', 'createdDate')} for group in groups]
             break
         if time.monotonic() >= deadline:
             break
