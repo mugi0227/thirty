@@ -9,6 +9,10 @@ on:
         description: Replace screenshots and the app preview too
         type: boolean
         default: true
+      prepare_review:
+        description: Also set price (free), age rating, content rights and attach the newest build
+        type: boolean
+        default: true
       dry_run:
         description: Only show what would change
         type: boolean
@@ -30,3 +34,4 @@ jobs:
         run: >-
           python3 scripts/asc_metadata.py release/metadata-ja.json
           ${{ inputs.dry_run && '--dry-run' || '' }} ${{ !inputs.media && '--skip-media' || '' }}
+          ${{ inputs.prepare_review && '--prepare-review' || '' }}

@@ -8,8 +8,10 @@ review notes, then replaces the screenshots and the app preview.
 
 Needs ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_P8 (the .p8 text) in the
 environment. The app record must already exist in App Store Connect.
-Left to the web page: price, App Privacy, age rating, review contact,
-attaching the in-app purchase and the build, and pressing "Submit".
+With --prepare-review it also sets the price to free, answers the age rating
+as "none", declares no third-party content and attaches the newest build.
+Left to the web page: App Privacy (no API), adding the first in-app purchase
+to the version, and pressing "Submit for Review".
 """
 import argparse
 import hashlib
@@ -191,11 +193,83 @@ def replace_media(client, localization_id, config):
         print(f"  {preview_type}: app preview {file}")
 
 
+AGE_RATING_NONE = ["alcoholTobaccoOrDrugUseOrReferences", "contests", "gamblingSimulated", "gunsOrOtherWeapons",
+                   "horrorOrFearThemes", "matureOrSuggestiveThemes", "medicalOrTreatmentInformation",
+                   "profanityOrCrudeHumor", "sexualContentGraphicAndNudity", "sexualContentOrNudity",
+                   "violenceCartoonOrFantasy", "violenceRealistic", "violenceRealisticProlongedGraphicOrSadistic"]
+AGE_RATING_FALSE = ["gambling", "unrestrictedWebAccess", "lootBox", "messagingAndChat", "parentalControls",
+                    "ageAssurance", "userGeneratedContent", "healthOrWellnessTopics", "advertising"]
+
+
+def step(name, action):
+    """Each review step stands alone: one Apple-side refusal should not stop the rest."""
+    try:
+        action()
+    except requests.HTTPError as error:
+        print(f"::warning::{name} was not set ({error.response.status_code}); do it on the App Store Connect page.")
+
+
+def prepare_review(client, app_id, version, version_string):
+    def content_rights():
+        client.patch(f"/v1/apps/{app_id}", {"data": {"type": "apps", "id": app_id,
+                     "attributes": {"contentRightsDeclaration": "DOES_NOT_USE_THIRD_PARTY_CONTENT"}}})
+        print("  content rights: no third-party content")
+
+    def age_rating():
+        infos = client.get(f"/v1/apps/{app_id}/appInfos")["data"]
+        info = next((i for i in infos if i["attributes"].get("appStoreState") != "READY_FOR_SALE"), infos[0])
+        declaration = client.get(f"/v1/appInfos/{info['id']}/ageRatingDeclaration")["data"]
+        skipped = []
+        # One field at a time: Apple adds and retires questions, and an unknown
+        # field would otherwise reject all the answers.
+        for key, value in [(k, "NONE") for k in AGE_RATING_NONE] + [(k, False) for k in AGE_RATING_FALSE]:
+            try:
+                client.patch(f"/v1/ageRatingDeclarations/{declaration['id']}", {"data": {
+                    "type": "ageRatingDeclarations", "id": declaration["id"], "attributes": {key: value}}})
+            except requests.HTTPError:
+                skipped.append(key)
+        print(f"  age rating: none{' (not accepted: ' + ', '.join(skipped) + ')' if skipped else ''}")
+
+    def price():
+        try:
+            current = client.get(f"/v1/apps/{app_id}/appPriceSchedule/manualPrices").get("data")
+        except requests.HTTPError:
+            current = None
+        if current:
+            print("  price: already set, left as is")
+            return
+        points = client.get(f"/v1/apps/{app_id}/appPricePoints", **{"filter[territory]": "JPN", "limit": 200})["data"]
+        free = next(p for p in points if float(p["attributes"]["customerPrice"]) == 0)
+        client.post("/v1/appPriceSchedules", {"data": {"type": "appPriceSchedules", "relationships": {
+            "app": {"data": {"type": "apps", "id": app_id}},
+            "baseTerritory": {"data": {"type": "territories", "id": "JPN"}},
+            "manualPrices": {"data": [{"type": "appPrices", "id": "${free}"}]}}},
+            "included": [{"type": "appPrices", "id": "${free}", "attributes": {"startDate": None},
+                          "relationships": {"appPricePoint": {"data": {"type": "appPricePoints", "id": free["id"]}}}}]})
+        print("  price: free")
+
+    def build():
+        builds = client.get("/v1/builds", **{"filter[app]": app_id, "filter[preReleaseVersion.version]": version_string,
+                                             "filter[processingState]": "VALID", "sort": "-uploadedDate", "limit": 1})["data"]
+        if not builds:
+            print("::warning::No processed build yet. Run \"Upload to App Store Connect\", wait for the e-mail, then run this again.")
+            return
+        client.patch(f"/v1/appStoreVersions/{version['id']}/relationships/build",
+                     {"data": {"type": "builds", "id": builds[0]["id"]}})
+        print(f"  build {builds[0]['attributes']['version']} attached")
+
+    step("Content rights", content_rights)
+    step("Age rating", age_rating)
+    step("Price", price)
+    step("Build", build)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--skip-media", action="store_true")
+    parser.add_argument("--prepare-review", action="store_true")
     args = parser.parse_args()
     config = json.loads((ROOT / args.config).read_text(encoding="utf-8"))
     client = Client(args.dry_run)
@@ -209,6 +283,8 @@ def main():
     localization_id = update_version(client, version, config["version"], config["locale"])
     if not args.skip_media:
         replace_media(client, localization_id, config)
+    if args.prepare_review:
+        prepare_review(client, app_id, version, version["attributes"]["versionString"])
     print("done")
 
 
