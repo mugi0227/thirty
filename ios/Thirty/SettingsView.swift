@@ -222,10 +222,10 @@ struct PlusBuyButtons: View {
                 }
             } label: {
                 Group {
-                    if store.isBusy || store.isLoadingProducts {
+                    if store.isBusy || store.isLoadingProducts || store.isDiagnosingProducts {
                         HStack {
                             ProgressView()
-                            Text(store.isLoadingProducts ? "商品情報を読み込み中…" : "処理中…")
+                            Text(store.isDiagnosingProducts ? "接続状況を確認中…" : (store.isLoadingProducts ? "商品情報を読み込み中…" : "処理中…"))
                         }
                     } else {
                         Text(store.product == nil ? "商品情報を読み直す" : "\(store.priceText)で購入").font(.headline)
@@ -236,10 +236,10 @@ struct PlusBuyButtons: View {
                 .background(TimerTheme.accent, in: Capsule())
             }
             .buttonStyle(SoftPressStyle())
-            .disabled(store.isBusy || store.isLoadingProducts)
+            .disabled(store.isBusy || store.isLoadingProducts || store.isDiagnosingProducts)
             Text("買い切りです。定期購入ではありません。").font(.caption).foregroundStyle(.secondary)
             Button("購入を復元") { Task { await store.restore() } }
-                .font(.footnote).frame(minHeight: 44).disabled(store.isBusy)
+                .font(.footnote).frame(minHeight: 44).disabled(store.isBusy || store.isDiagnosingProducts)
             if let message = store.message ?? store.productLoadFailure {
                 Text(message).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
@@ -247,6 +247,12 @@ struct PlusBuyButtons: View {
                 DisclosureGroup("詳しい情報") {
                     Text(details).font(.caption).textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    Button(store.isDiagnosingProducts ? "接続状況を確認中…" : "接続状況を調べる") {
+                        Task { await store.diagnoseProducts() }
+                    }
+                    .disabled(store.isBusy || store.isLoadingProducts || store.isDiagnosingProducts)
+                    Button("情報をコピー") { UIPasteboard.general.string = details }
+                        .disabled(store.isDiagnosingProducts)
                 }
                 .font(.footnote)
             }
