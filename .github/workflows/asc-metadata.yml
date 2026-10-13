@@ -1,4 +1,4 @@
-name: Verify App Store reflection (read only)
+name: Inspect App Review readiness (read only)
 on:
   workflow_dispatch:
     inputs:
@@ -15,16 +15,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
-      - name: Verify build and media through GET requests only
+      - name: Inspect App Review readiness through GET requests only
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           REQUIRE_ATTACHED: ${{ inputs.require_attached }}
-        run: python3 -u scripts/verify_store_reflection.py
+        run: python3 -u scripts/check_review_readiness.py
       - uses: actions/upload-artifact@v5
         if: always()
         with:
-          name: store-reflection-verification
-          path: store-reflection-verification.json
+          name: app-review-readiness
+          path: app-review-readiness.json
           retention-days: 7
