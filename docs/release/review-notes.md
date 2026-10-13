@@ -19,8 +19,9 @@ Thirty is a single-screen focus timer. No account or login is needed.
 | 種類 | 非消耗型 |
 | 参照名 | Thirty+ |
 | 製品ID | jp.mugilab.thirty.plus |
-| 価格（案） | ¥480 |
+| 価格 | ¥500 |
 | 表示名 | Thirty+ |
 | 説明（55文字まで） | スキン、ロック画面表示、終了音などが使えます。買い切りです。 |
-| 審査用スクリーンショット | Thirty+の画面（`docs/images/simulator/thirty-plus.png` など） |
+| 審査用スクリーンショット | `docs/release/store/iap-review-thirty-plus.png`（1206×2622。縮小版は寸法エラーになる） |
+| 画像（1024×1024） | `docs/release/store/iap-thirty-plus-1024.png`（`scripts/make_iap_image.py` で作成） |
 | ファミリー共有 | オン（任意） |

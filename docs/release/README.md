@@ -36,7 +36,7 @@
 2. App Store Connectの「契約／税金／口座情報」で **有料App契約** を有効にする（App内課金に必要）。税と銀行口座も登録。
 3. **App IDを作る**：`jp.mugilab.thirty`（App）と `jp.mugilab.thirty.widgets`（ウィジェット拡張）。Xcodeの自動署名でも作られます。
 4. App Store Connectで **新規App** を作成。名前は [metadata-ja.md](metadata-ja.md) の案、プライマリ言語は日本語、Bundle IDは上記。
-5. **App内課金を作成**：非消耗型、製品ID `jp.mugilab.thirty.plus`、価格は案で¥480。表示名と説明、審査用スクリーンショット（Thirty+の画面）は [review-notes.md](review-notes.md)。
+5. **App内課金を作成**：非消耗型、製品ID `jp.mugilab.thirty.plus`、価格は¥500。表示名と説明、審査用スクリーンショット（Thirty+の画面）は [review-notes.md](review-notes.md)。
 6. **署名してアップロード（Macなし、GitHub Actionsで）**
    1. App Store Connect →「ユーザとアクセス」→「統合」→「App Store Connect API」→「チームキー」で「＋」。名前は自由、アクセスは **Admin**（Appleのクラウド署名を使うため）。
    2. 作成後に一度だけダウンロードできる `AuthKey_XXXXXXXXXX.p8` を保存。画面に出る **キーID** と、一覧の上の **Issuer ID** も控える。
