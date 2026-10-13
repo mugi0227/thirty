@@ -122,14 +122,22 @@ def update_version(client, version, config, locale):
     print("  description, keywords, promotional text, URLs, copyright")
 
     notes = text("review_notes_file")
-    detail = client.get(f"/v1/appStoreVersions/{version['id']}/appStoreReviewDetail").get("data")
-    if detail:
-        client.patch(f"/v1/appStoreReviewDetails/{detail['id']}", {"data": {"type": "appStoreReviewDetails", "id": detail["id"],
-                     "attributes": {"notes": notes, "demoAccountRequired": False}}})
-    else:
-        client.post("/v1/appStoreReviewDetails", {"data": {"type": "appStoreReviewDetails",
-                    "attributes": {"notes": notes, "demoAccountRequired": False},
-                    "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version["id"]}}}}})
+    try:
+        detail = client.get(f"/v1/appStoreVersions/{version['id']}/appStoreReviewDetail").get("data")
+        if detail:
+            client.patch(f"/v1/appStoreReviewDetails/{detail['id']}", {"data": {"type": "appStoreReviewDetails", "id": detail["id"],
+                         "attributes": {"notes": notes, "demoAccountRequired": False}}})
+        else:
+            client.post("/v1/appStoreReviewDetails", {"data": {"type": "appStoreReviewDetails",
+                        "attributes": {"notes": notes, "demoAccountRequired": False},
+                        "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": version["id"]}}}}})
+    except requests.HTTPError as error:
+        # Apple re-validates the whole review contact on every change, so a
+        # contact typed on the web page (e.g. a phone number without +81)
+        # blocks the notes. Keep going and say what to fix.
+        print(f"::warning::Review notes were not saved ({error.response.status_code}). Fix the review contact on the "
+              "App Store Connect page (phone as +81 90 1234 5678), then run again, or paste release/review-notes-en.txt there.")
+        return current["id"]
     print("  review notes")
     return current["id"]
 
