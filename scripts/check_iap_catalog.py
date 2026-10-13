@@ -2,6 +2,7 @@
 import json
 import base64
 import plistlib
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -30,6 +31,15 @@ config = json.loads((ROOT / 'release/metadata-ja.json').read_text(encoding='utf-
 app = get('/v1/apps', **{'filter[bundleId]': config['bundle_id']})['data'][0]
 app_id = app['id']
 report['app'] = {'id': app_id, 'bundleId': app['attributes']['bundleId']}
+sandbox_result = get('/v2/sandboxTesters', **{'limit': 200,
+    'fields[sandboxTesters]': 'territory,interruptPurchases'})
+if 'data' in sandbox_result:
+    testers = sandbox_result['data']
+    report['sandbox_testers'] = {'count': len(testers),
+        'counts_by_territory': dict(Counter(item['attributes'].get('territory', 'unknown') for item in testers)),
+        'interrupted_purchases_enabled_count': sum(bool(item['attributes'].get('interruptPurchases')) for item in testers)}
+else:
+    report['sandbox_testers'] = {'count': None, 'lookup_available': False}
 report['signing_configuration'] = []
 for bundle in get('/v1/bundleIds', **{'filter[identifier]': config['bundle_id'], 'limit': 10}).get('data', []):
     if bundle['attributes']['identifier'] != config['bundle_id']:
