@@ -136,7 +136,7 @@ final class TimerModel: ObservableObject {
     var lastMinutes: Int { max(1, Int(ceil(Double(isBreak ? workSeconds : countdown.configuredSeconds) / 60))) }
     private var cycleActive: Bool { hasPlus && cycleEnabled }
     private var sound: EndSound { hasPlus ? endSound : .chime }
-    var remainingLabel: String { "残り\(seconds / 60)分\(seconds % 60)秒" }
+    var remainingLabel: String { String(localized: "残り\(seconds / 60)分\(seconds % 60)秒") }
 
     func tick(at date: Date = AppClock.now(), announceCompletion: Bool = true) {
         now = date
@@ -322,15 +322,15 @@ final class TimerModel: ObservableObject {
             }
             guard let self, !Task.isCancelled, currentRevision == self.revision else { return }
             guard allowed else {
-                self.notificationNotice = "終了の通知はオフです。画面内では時間を確認できます。"
+                self.notificationNotice = String(localized: "終了の通知はオフです。画面内では時間を確認できます。")
                 return
             }
             self.notificationNotice = nil
             let interval = deadline.timeIntervalSinceNow
             guard interval > 0 else { self.tick(); return }
             let content = UNMutableNotificationContent()
-            content.title = self.isBreak ? "休憩おわり" : "タイマー"
-            content.body = "終了"
+            content.title = self.isBreak ? String(localized: "休憩おわり") : String(localized: "タイマー")
+            content.body = String(localized: "時間になりました。")
             content.sound = self.sound.fileName.map { UNNotificationSound(named: UNNotificationSoundName($0)) }
             // Every revision has its own ID, including across process restarts.
             let requestID = self.notificationPrefix + UUID().uuidString
@@ -346,7 +346,7 @@ final class TimerModel: ObservableObject {
                 }
             } catch {
                 if currentRevision == self.revision {
-                    self.notificationNotice = "終了の通知を設定できませんでした。画面内で時間を確認してください。"
+                    self.notificationNotice = String(localized: "終了の通知を設定できませんでした。画面内で時間を確認してください。")
                 }
             }
         }

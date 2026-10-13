@@ -51,15 +51,15 @@ final class Store: ObservableObject {
         do {
             product = try await productRequest.value()
             if product == nil {
-                productLoadFailure = "Thirty+の商品情報が見つかりませんでした。時間をおいて、商品情報を読み直してください。"
-                diagnosticMessage = "App Storeから商品が返りませんでした。\n商品ID: \(Self.plusID)"
+                productLoadFailure = String(localized: "Thirty+の商品情報が見つかりませんでした。時間をおいて、商品情報を読み直してください。")
+                diagnosticMessage = String(localized: "App Storeから商品が返りませんでした。\n商品ID: \(Self.plusID)")
             } else {
                 productLoadFailure = nil
                 diagnosticMessage = nil
             }
         } catch {
             product = nil
-            productLoadFailure = "商品情報を読み込めませんでした。通信を確認して、もう一度お試しください。"
+            productLoadFailure = String(localized: "商品情報を読み込めませんでした。通信を確認して、もう一度お試しください。")
             diagnosticMessage = details(error)
         }
         return product != nil
@@ -80,17 +80,17 @@ final class Store: ObservableObject {
                     setPlus(true)
                     message = nil
                 } else {
-                    message = "購入を確認できませんでした。"
+                    message = String(localized: "購入を確認できませんでした。")
                 }
             case .pending:
-                message = "購入の承認待ちです。承認されると自動で使えるようになります。"
+                message = String(localized: "購入の承認待ちです。承認されると自動で使えるようになります。")
             case .userCancelled:
                 break
             @unknown default:
                 break
             }
         } catch {
-            message = "購入できませんでした。"
+            message = String(localized: "購入できませんでした。")
             diagnosticMessage = details(error)
         }
     }
@@ -103,9 +103,9 @@ final class Store: ObservableObject {
         do {
             try await AppStore.sync()
             await refreshEntitlements()
-            message = hasPlus ? nil : "復元できる購入は見つかりませんでした。"
+            message = hasPlus ? nil : String(localized: "復元できる購入は見つかりませんでした。")
         } catch {
-            message = "購入を復元できませんでした。通信を確認して、もう一度お試しください。"
+            message = String(localized: "購入を復元できませんでした。通信を確認して、もう一度お試しください。")
             diagnosticMessage = details(error)
         }
     }

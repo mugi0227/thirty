@@ -24,7 +24,7 @@ struct SkinPicker: View {
                         .frame(height: 230).frame(maxWidth: 420)
                         .overlay(alignment: .topTrailing) {
                             if previewLocked {
-                                Label("試着中", systemImage: "eye").font(.caption.weight(.semibold))
+                                Label(String(localized: "試着中"), systemImage: "eye").font(.caption.weight(.semibold))
                                     .padding(.horizontal, 10).padding(.vertical, 6)
                                     .background(.ultraThinMaterial, in: Capsule()).padding(12)
                             }
@@ -37,7 +37,7 @@ struct SkinPicker: View {
                         ForEach(Skin.all) { skin in tile(skin) }
                     }
                     if store.hasPlus {
-                        Label("Thirty+ をご利用いただき、ありがとうございます。", systemImage: "heart.fill")
+                        Label(String(localized: "Thirty+ をご利用いただき、ありがとうございます。"), systemImage: "heart.fill")
                             .font(.footnote).foregroundStyle(.secondary).padding(.top, 4)
                     } else {
                         plusCard
@@ -47,10 +47,10 @@ struct SkinPicker: View {
                 .frame(maxWidth: 560).frame(maxWidth: .infinity)
             }
             .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("スキン").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(String(localized: "スキン")).navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel("閉じる")
+                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel(String(localized: "閉じる"))
                 }
             }
         }
@@ -83,13 +83,13 @@ struct SkinPicker: View {
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(skin.name)
-        .accessibilityValue(selectedID == skin.id ? "使用中" : locked ? "Thirty+ で使えます" : "")
+        .accessibilityValue(selectedID == skin.id ? String(localized: "使用中") : locked ? String(localized: "Thirty+ で使えます") : "")
     }
 
     private var plusCard: some View {
         VStack(spacing: 12) {
             Text("Thirty+").font(.title3.weight(.bold))
-            Text("すべてのスキンのほか、ロック画面での表示や終了音も選べます。")
+            Text(String(localized: "すべてのスキンのほか、ロック画面での表示や終了音も選べます。"))
                 .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             PlusBuyButtons(store: store) { selectedID = previewID }
         }

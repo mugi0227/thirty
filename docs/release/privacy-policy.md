@@ -1,6 +1,6 @@
 # Thirty プライバシーポリシー
 
-最終更新日：2026年10月12日
+最終更新日：2026年10月13日
 
 Thirty（以下「本アプリ」）は、利用者の個人情報を収集しません。
 
@@ -30,3 +30,35 @@ Appleによる情報の取り扱いは、Appleのプライバシーポリシー�
 ## 変更
 
 このポリシーを変更する場合は、このページを更新します。
+
+---
+
+# Thirty Privacy Policy
+
+Last updated: October 13, 2026
+
+Thirty does not collect your personal information.
+
+## Information collection
+
+The app does not collect or send your name, email address, location, contacts, usage data, or other personal information to the developer or third-party servers. It does not use advertising, analytics, or tracking services.
+
+## Information stored on your device
+
+The app stores your timer state, display settings, selected skin, and whether you have seen the getting started guide on your device. Deleting the app removes this information.
+
+## Notifications
+
+The app schedules local notifications on your device to let you know when a timer ends. Notification content is not sent to an external server.
+
+## In-app purchases
+
+Thirty+ purchases and restoration use Apple's App Store. The developer does not receive your payment information. See Apple's privacy policy for information about Apple's handling of data.
+
+## Contact
+
+See the [support page](support.md).
+
+## Changes
+
+This page will be updated if the policy changes.

@@ -1,0 +1,69 @@
+name: Check Japanese and English
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/japanese-english
+permissions:
+  contents: read
+concurrency:
+  group: localization-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - run: brew install xcodegen
+      - name: Generate the project and test timer behavior
+        working-directory: ios
+        run: |
+          xcodebuild -version
+          xcodegen generate
+          swift test
+      - name: Compile Release app and widget and verify bundled languages
+        working-directory: ios
+        run: |
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath ../build \
+            CODE_SIGNING_ALLOWED=NO build -quiet
+          swift ../scripts/ci/check_localizations.swift ../build/Build/Products/Release-iphoneos/Thirty.app \
+            ../build/Build/Products/Release-iphoneos/Thirty.app/PlugIns/ThirtyWidgets.appex
+      - name: Build Simulator tests
+        working-directory: ios
+        run: |
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath ../build-sim \
+            CODE_SIGNING_ALLOWED=NO build-for-testing -quiet
+      - name: Verify both languages on iPhone and iPad
+        working-directory: ios
+        run: |
+          set -eo pipefail
+          mkdir -p ../localization-screenshots
+          for device in 'iPhone 17' 'iPad Pro 13-inch (M5)'; do
+            udid=$(python3 ../scripts/ci/boot_localization_sim.py "$device" | tail -1)
+            slug=$(echo "$device" | tr -cs '[:alnum:]' '-')
+            mkdir -p "../localization-screenshots/$slug"
+            TEST_RUNNER_SCREENSHOT_DIR="$PWD/../localization-screenshots/$slug" \
+              xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+              -destination "id=$udid" -derivedDataPath ../build-sim \
+              -parallel-testing-enabled NO \
+              -test-timeouts-enabled YES \
+              -maximum-test-execution-time-allowance 180 \
+              -only-testing:ThirtyUITests/LocalizationTests \
+              CODE_SIGNING_ALLOWED=NO test-without-building \
+              > "../localization-$slug.log" 2>&1
+            grep -E 'Test Case.*(passed|failed)|error:|TEST (SUCCEEDED|FAILED)' "../localization-$slug.log"
+            xcrun simctl shutdown "$udid"
+          done
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: Thirty-localization-verification
+          path: |
+            localization-screenshots/
+            localization-*.log
+          retention-days: 7

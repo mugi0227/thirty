@@ -34,6 +34,10 @@ struct OnboardingGuide: View {
         }
     }
     private var unlockPresses: Int { ProcessInfo.processInfo.operatingSystemVersion.majorVersion <= 18 ? 2 : 3 }
+    private var guideURL: URL {
+        let language = Bundle.main.preferredLocalizations.first == "ja" ? "ja-jp" : "en-us"
+        return URL(string: "https://support.apple.com/\(language)/111795")!
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,7 +60,7 @@ struct OnboardingGuide: View {
         HStack {
             Button { move(by: -1) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
                 .opacity(page == pages.first ? 0 : 1).disabled(page == pages.first)
-                .accessibilityLabel("前へ")
+                .accessibilityLabel(String(localized: "前へ"))
             Spacer()
             HStack(spacing: 6) {
                 ForEach(pages) { item in
@@ -67,7 +71,7 @@ struct OnboardingGuide: View {
             .accessibilityElement().accessibilityLabel("\((pages.firstIndex(of: page) ?? 0) + 1) / \(pages.count)")
             Spacer()
             Button(action: onDone) { Image(systemName: "xmark").frame(width: 44, height: 44) }
-                .accessibilityLabel("案内を閉じる")
+                .accessibilityLabel(String(localized: "案内を閉じる"))
         }
         .font(.system(size: 17, weight: .medium))
         .padding(.horizontal, 12).padding(.top, 8)
@@ -76,7 +80,7 @@ struct OnboardingGuide: View {
     private var footer: some View {
         VStack(spacing: 6) {
             Button { if page == .triple { onDone() } else { move(by: 1) } } label: {
-                Text(page == .triple ? "タイマーへ" : "次へ").font(.system(size: 17, weight: .bold))
+                Text(page == .triple ? String(localized: "タイマーへ") : String(localized: "次へ")).font(.system(size: 17, weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 54)
                     .foregroundStyle(TimerTheme.onAccent)
                     .background(TimerTheme.accent, in: Capsule())
@@ -90,10 +94,10 @@ struct OnboardingGuide: View {
 
     private var secondaryTitle: String {
         switch page {
-        case .welcome: return "すぐに始める"
-        case .enable: return "あとで設定する"
-        case .biometry: return "スキップ"
-        case .triple: return "最初から見る"
+        case .welcome: return String(localized: "すぐに始める")
+        case .enable: return String(localized: "あとで設定する")
+        case .biometry: return String(localized: "スキップ")
+        case .triple: return String(localized: "最初から見る")
         }
     }
 
@@ -116,16 +120,16 @@ struct OnboardingGuide: View {
             switch item {
             case .welcome:
                 MiniTimerDemo().frame(maxWidth: 190, maxHeight: 300).padding(.vertical, 20)
-                titleBlock(eyebrow: "THIRTY", title: "とりあえず、30分！",
-                           body: "「やるべきことがあるのに、\nSNSを1時間見てしまっていた…」\nそんな時は、考える前に\nタイマーをスタートしてしまいましょう！")
+                titleBlock(eyebrow: "THIRTY", title: String(localized: "とりあえず、30分！"),
+                           body: String(localized: "「やるべきことがあるのに、\nSNSを1時間見てしまっていた…」\nそんな時は、考える前に\nタイマーをスタートしてしまいましょう！"))
             case .enable:
-                titleBlock(eyebrow: "STEP 1 ・ 任意", title: "ほかのアプリに\n逃げられなくする",
-                           body: "iPhoneの「アクセスガイド」を使うと、\n計測中はThirtyから出られなくなります。")
-                Breadcrumbs(items: ["設定", "アクセシビリティ", "アクセスガイド"]).padding(.top, 32)
+                titleBlock(eyebrow: String(localized: "STEP 1 ・ 任意"), title: String(localized: "ほかのアプリに\n逃げられなくする"),
+                           body: String(localized: "iPhoneの「アクセスガイド」を使うと、\n計測中はThirtyから出られなくなります。"))
+                Breadcrumbs(items: [String(localized: "設定"), String(localized: "アクセシビリティ"), String(localized: "アクセスガイド")]).padding(.top, 32)
                 SettingsMock {
-                    SettingsMockRow(title: "アクセスガイド", accessory: .toggle, highlighted: true)
-                    SettingsMockNote(text: "設定アプリで、このスイッチをオンにします。")
-                    SettingsMockRow(title: "パスコード設定", accessory: .chevron)
+                    SettingsMockRow(title: String(localized: "アクセスガイド"), accessory: .toggle, highlighted: true)
+                    SettingsMockNote(text: String(localized: "設定アプリで、このスイッチをオンにします。"))
+                    SettingsMockRow(title: String(localized: "パスコード設定"), accessory: .chevron)
                 }
                 .padding(.top, 12)
                 // iOS has no public link straight to Guided Access, so this opens
@@ -133,31 +137,31 @@ struct OnboardingGuide: View {
                 Button {
                     if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                 } label: {
-                    Label("設定を開く", systemImage: "gearshape").font(.system(size: 15, weight: .semibold))
+                    Label(String(localized: "設定を開く"), systemImage: "gearshape").font(.system(size: 15, weight: .semibold))
                         .padding(.horizontal, 18).frame(minHeight: 44)
                         .overlay(Capsule().stroke(Color.primary.opacity(0.2), lineWidth: 1.5))
                 }
                 .buttonStyle(SoftPressStyle())
                 .padding(.top, 16)
-                Text("開いたら左上の「＜」で設定のトップに戻り、\nアクセシビリティ → アクセスガイド へ。")
+                Text(String(localized: "開いたら左上の「＜」で設定のトップに戻り、\nアクセシビリティ → アクセスガイド へ。"))
                     .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).padding(.top, 6)
-                Link("Appleの説明を見る", destination: URL(string: "https://support.apple.com/ja-jp/111795")!)
+                Link(String(localized: "Appleの説明を見る"), destination: guideURL)
                     .font(.footnote).foregroundStyle(.secondary).frame(minHeight: 44)
             case .biometry:
-                titleBlock(eyebrow: "STEP 2 ・ 任意", title: "解除は\(biometry)で",
-                           body: "パスコード設定で\(biometry)をオンにすると、\n終わったあとの解除がかんたんです。")
-                Breadcrumbs(items: ["アクセスガイド", "パスコード設定"]).padding(.top, 32)
+                titleBlock(eyebrow: String(localized: "STEP 2 ・ 任意"), title: String(localized: "解除は\(biometry)で"),
+                           body: String(localized: "パスコード設定で\(biometry)をオンにすると、\n終わったあとの解除がかんたんです。"))
+                Breadcrumbs(items: [String(localized: "アクセスガイド"), String(localized: "パスコード設定")]).padding(.top, 32)
                 SettingsMock {
-                    SettingsMockRow(title: "アクセスガイドのパスコードを設定", accessory: .none, isLink: true)
-                    SettingsMockNote(text: "はじめてなら、ここで6桁のパスコードを決めます。")
+                    SettingsMockRow(title: String(localized: "アクセスガイドのパスコードを設定"), accessory: .none, isLink: true)
+                    SettingsMockNote(text: String(localized: "はじめてなら、ここで6桁のパスコードを決めます。"))
                     SettingsMockRow(title: biometry, accessory: .toggle, highlighted: true)
                 }
                 .padding(.top, 12)
             case .triple:
-                titleBlock(eyebrow: "STEP 3", title: "始めたら、\n\(hardwareButton.title)を3回",
-                           body: "Thirtyの画面でカチカチカチ。\n画面が固定され、他のアプリを開けません。")
+                titleBlock(eyebrow: "STEP 3", title: String(localized: "始めたら、\n\(hardwareButton.title)を3回"),
+                           body: String(localized: "Thirtyの画面でカチカチカチ。\n画面が固定され、他のアプリを開けません。"))
                 PressDiagram(kind: hardwareButton).frame(height: 260).padding(.vertical, 24)
-                Text("解除は同じボタンを\(unlockPresses)回 → 認証 → 「終了」。\nタイマーが終わっても、ロックは自動では外れません。")
+                Text(String(localized: "解除は同じボタンを\(unlockPresses)回 → 認証 → 「終了」。\nタイマーが終わっても、ロックは自動では外れません。"))
                     .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center).lineSpacing(4)
             }
         }
@@ -268,7 +272,7 @@ struct SettingsMockRow: View {
             withAnimation(.easeInOut(duration: 0.35).delay(0.9)) { on = true }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessory == .toggle ? "設定アプリの\(title)をオンにする" : title)
+        .accessibilityLabel(accessory == .toggle ? String(localized: "設定アプリの\(title)をオンにする") : title)
     }
 }
 

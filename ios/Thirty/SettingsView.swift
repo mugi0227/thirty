@@ -18,24 +18,24 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    Toggle("開いたらすぐスタート", isOn: $model.startOnLaunch)
+                    Toggle(String(localized: "開いたらすぐスタート"), isOn: $model.startOnLaunch)
                 } header: {
-                    Text("始めかた")
+                    Text(String(localized: "始めかた"))
                 } footer: {
-                    Text("ショートカットApp、アクションボタン、コントロールセンター、ホーム画面のアイコンの長押し、ウィジェットからも、ワンタップで始められます。")
+                    Text(String(localized: "ショートカットApp、アクションボタン、コントロールセンター、ホーム画面のアイコンの長押し、ウィジェットからも、ワンタップで始められます。"))
                 }
 
-                Section("計測中") {
-                    Toggle("画面を暗くする", isOn: $model.dimScreen)
-                    Toggle("画面を消さない", isOn: $model.keepScreenOn)
-                    Toggle("伏せたら画面を消す", isOn: $model.faceDownScreenOff)
+                Section(String(localized: "計測中")) {
+                    Toggle(String(localized: "画面を暗くする"), isOn: $model.dimScreen)
+                    Toggle(String(localized: "画面を消さない"), isOn: $model.keepScreenOn)
+                    Toggle(String(localized: "伏せたら画面を消す"), isOn: $model.faceDownScreenOff)
                 }
 
                 Section {
                     if !plus {
                         Button { showPlus = true } label: {
                             HStack {
-                                Label("Thirty+ でできること", systemImage: "sparkles")
+                                Label(String(localized: "Thirty+ でできること"), systemImage: "sparkles")
                                 Spacer()
                                 Text(store.product?.displayPrice ?? "").foregroundStyle(.secondary)
                                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
@@ -44,27 +44,27 @@ struct SettingsView: View {
                     }
                     Button { showSkins = true } label: {
                         HStack {
-                            Text("スキン").foregroundStyle(Color.primary)
+                            Text(String(localized: "スキン")).foregroundStyle(Color.primary)
                             Spacer()
                             Text(skin.name).foregroundStyle(.secondary)
                             SkinSample(skin: skin, lit: 3, slats: 4, compact: true).frame(width: 34, height: 40)
                         }
                     }
-                    plusPicker("終了音", selection: $model.endSound) {
+                    plusPicker(String(localized: "終了音"), selection: $model.endSound) {
                         ForEach(EndSound.allCases) { sound in
                             Text(sound.title + (sound.isFree || plus ? "" : " 🔒")).tag(sound)
                         }
                     } isAllowed: { $0.isFree }
-                    plusToggle("休憩をはさんでくり返す", isOn: $model.cycleEnabled)
+                    plusToggle(String(localized: "休憩をはさんでくり返す"), isOn: $model.cycleEnabled)
                     if plus && model.cycleEnabled {
-                        Stepper("休憩 \(model.breakMinutes)分", value: $model.breakMinutes, in: 1...30)
+                        Stepper(String(localized: "休憩 \(model.breakMinutes)分"), value: $model.breakMinutes, in: 1...30)
                     }
-                    plusToggle("閉じても残り時間を表示", isOn: $model.liveActivityEnabled)
-                    plusPicker("棒の本数", selection: $model.slatCount) {
-                        Text("30本").tag(30)
-                        Text("60本" + (plus ? "" : " 🔒")).tag(60)
+                    plusToggle(String(localized: "閉じても残り時間を表示"), isOn: $model.liveActivityEnabled)
+                    plusPicker(String(localized: "棒の本数"), selection: $model.slatCount) {
+                        Text(String(localized: "30本")).tag(30)
+                        Text(String(localized: "60本") + (plus ? "" : " 🔒")).tag(60)
                     } isAllowed: { $0 == 30 }
-                    plusToggle("秒を表示", isOn: $model.showSeconds, lockedValue: true)
+                    plusToggle(String(localized: "秒を表示"), isOn: $model.showSeconds, lockedValue: true)
                     iconRow
                 } header: {
                     HStack {
@@ -72,28 +72,33 @@ struct SettingsView: View {
                         if !plus { Image(systemName: "lock.fill").font(.caption2) }
                     }
                 } footer: {
-                    if !plus { Text("鍵のついた項目は Thirty+（買い切り）で使えます。") }
+                    if !plus { Text(String(localized: "鍵のついた項目は Thirty+（買い切り）で使えます。")) }
                 }
 
                 Section {
-                    Button("はじめの案内をもう一度見る") {
+                    Button(String(localized: "はじめの案内をもう一度見る")) {
                         dismiss()
                         onShowGuide()
                     }
                     if model.notificationNotice != nil {
-                        Button("終了通知の設定を開く") {
+                        Button(String(localized: "終了通知の設定を開く")) {
                             if let url = URL(string: UIApplication.openNotificationSettingsURLString) { UIApplication.shared.open(url) }
                         }
                     }
                     if !plus {
-                        Button("購入を復元") { Task { await store.restore() } }
+                        Button(String(localized: "購入を復元")) { Task { await store.restore() } }
                     }
+                    Link(String(localized: "プライバシーポリシー"), destination: URL(string: "https://github.com/mugi0227/thirty/blob/main/docs/release/privacy-policy.md")!)
+                        .accessibilityIdentifier("privacy-policy-link")
+                    Link(String(localized: "サポート"), destination: URL(string: "https://github.com/mugi0227/thirty/blob/main/docs/release/support.md")!)
+                        .accessibilityIdentifier("support-link")
                 }
             }
-            .navigationTitle("設定").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(String(localized: "設定")).navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel("閉じる")
+                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel(String(localized: "閉じる"))
+                        .accessibilityIdentifier("close-settings")
                 }
             }
             .sheet(isPresented: $showPlus) { PlusView(store: store) }
@@ -125,9 +130,9 @@ struct SettingsView: View {
     }
 
     private var iconRow: some View {
-        let icons: [(String?, String)] = [(nil, "標準"), ("AppIcon-Paper", "ペーパー"), ("AppIcon-Mint", "ミント"),
-                                          ("AppIcon-Amber", "アンバー"), ("AppIcon-Night", "ナイトブルー"), ("AppIcon-Ruby", "ルビー")]
-        return Picker("アプリのアイコン", selection: Binding(
+        let icons: [(String?, String)] = [(nil, String(localized: "標準")), ("AppIcon-Paper", String(localized: "ペーパー")), ("AppIcon-Mint", String(localized: "ミント")),
+                                          ("AppIcon-Amber", String(localized: "アンバー")), ("AppIcon-Night", String(localized: "ナイトブルー")), ("AppIcon-Ruby", String(localized: "ルビー"))]
+        return Picker(String(localized: "アプリのアイコン"), selection: Binding(
             get: { iconName ?? "" },
             set: { value in
                 guard plus || value.isEmpty else { showPlus = true; return }
@@ -150,12 +155,12 @@ struct PlusView: View {
     @ObservedObject var store: Store
     @Environment(\.dismiss) private var dismiss
     private let perks: [(String, String, String)] = [
-        ("paintpalette", "スキン", "アンバー、ナイトブルー、ルビーなど5種類"),
-        ("lock.iphone", "閉じても、残りが見える", "ほかのアプリやロック画面でも、画面上部の黒い部分（Dynamic Island）やロック画面に、減っていく棒と残り時間が出ます。充電中に横置きすると置き時計にも（StandBy）"),
-        ("bell", "終了音", "キッチンタイマーのピピピ、ベル、やさしい音、振動のみ"),
-        ("arrow.triangle.2.circlepath", "休憩をはさんでくり返す", "30分→休憩5分→30分…を自動で"),
-        ("app.badge", "アプリのアイコン", "スキンに合わせた5種類"),
-        ("slider.horizontal.3", "表示の細かい設定", "棒を60本に、分だけの表示に"),
+        ("paintpalette", String(localized: "スキン"), String(localized: "アンバー、ナイトブルー、ルビーなど5種類")),
+        ("lock.iphone", String(localized: "閉じても、残りが見える"), String(localized: "ほかのアプリやロック画面でも、画面上部の黒い部分（Dynamic Island）やロック画面に、減っていく棒と残り時間が出ます。充電中に横置きすると置き時計にも（StandBy）")),
+        ("bell", String(localized: "終了音"), String(localized: "キッチンタイマーのピピピ、ベル、やさしい音、振動のみ")),
+        ("arrow.triangle.2.circlepath", String(localized: "休憩をはさんでくり返す"), String(localized: "30分→休憩5分→30分…を自動で")),
+        ("app.badge", String(localized: "アプリのアイコン"), String(localized: "スキンに合わせた5種類")),
+        ("slider.horizontal.3", String(localized: "表示の細かい設定"), String(localized: "棒を60本に、分だけの表示に")),
     ]
 
     var body: some View {
@@ -164,7 +169,7 @@ struct PlusView: View {
                 VStack(spacing: 24) {
                     VStack(spacing: 8) {
                         Text("Thirty+").font(.largeTitle.weight(.bold))
-                        Text("タイマーは無料のまま、広告もありません。\n気に入ったら、買い切りでどうぞ。")
+                        Text(String(localized: "タイマーは無料のまま、広告もありません。\n気に入ったら、買い切りでどうぞ。"))
                             .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
                     .padding(.top, 8)
@@ -187,7 +192,7 @@ struct PlusView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     if store.hasPlus {
-                        Label("購入済みです。ありがとうございます。", systemImage: "heart.fill").foregroundStyle(.secondary)
+                        Label(String(localized: "購入済みです。ありがとうございます。"), systemImage: "heart.fill").foregroundStyle(.secondary)
                     } else {
                         PlusBuyButtons(store: store)
                     }
@@ -198,7 +203,8 @@ struct PlusView: View {
             .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel("閉じる")
+                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel(String(localized: "閉じる"))
+                        .accessibilityIdentifier("close-plus")
                 }
             }
         }
@@ -225,10 +231,10 @@ struct PlusBuyButtons: View {
                     if store.isBusy || store.isLoadingProducts {
                         HStack {
                             ProgressView()
-                            Text(store.isLoadingProducts ? "商品情報を読み込み中…" : "処理中…")
+                            Text(store.isLoadingProducts ? String(localized: "商品情報を読み込み中…") : String(localized: "処理中…"))
                         }
                     } else {
-                        Text(store.product == nil ? "商品情報を読み直す" : "\(store.priceText)で購入").font(.headline)
+                        Text(store.product == nil ? String(localized: "商品情報を読み直す") : String(localized: "\(store.priceText)で購入")).font(.headline)
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 52)
@@ -237,14 +243,14 @@ struct PlusBuyButtons: View {
             }
             .buttonStyle(SoftPressStyle())
             .disabled(store.isBusy || store.isLoadingProducts)
-            Text("買い切りです。定期購入ではありません。").font(.caption).foregroundStyle(.secondary)
-            Button("購入を復元") { Task { await store.restore() } }
+            Text(String(localized: "買い切りです。定期購入ではありません。")).font(.caption).foregroundStyle(.secondary)
+            Button(String(localized: "購入を復元")) { Task { await store.restore() } }
                 .font(.footnote).frame(minHeight: 44).disabled(store.isBusy)
             if let message = store.message ?? store.productLoadFailure {
                 Text(message).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
             if let details = store.diagnosticMessage {
-                DisclosureGroup("詳しい情報") {
+                DisclosureGroup(String(localized: "詳しい情報")) {
                     Text(details).font(.caption).textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
