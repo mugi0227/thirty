@@ -1,37 +1,30 @@
-name: Fill App Store listing
-# Writes the listing text and uploads screenshots and the app preview to App
-# Store Connect from release/metadata-ja.json. Runs on Linux; no Mac needed.
-# Uses the same secrets as "Upload to App Store Connect".
+name: Verify App Store reflection (read only)
 on:
   workflow_dispatch:
     inputs:
-      media:
-        description: Replace screenshots and the app preview too
-        type: boolean
-        default: true
-      prepare_review:
-        description: Also set price (free), age rating, content rights and attach the newest build
-        type: boolean
-        default: true
-      dry_run:
-        description: Only show what would change
+      require_attached:
+        description: Also require build 5 to be attached to version 1.0
         type: boolean
         default: false
 permissions:
   contents: read
 jobs:
-  listing:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
-      - name: Update App Store Connect
+      - name: Verify build and media through GET requests only
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-        run: >-
-          python3 scripts/asc_metadata.py release/metadata-ja.json
-          ${{ inputs.dry_run && '--dry-run' || '' }} ${{ !inputs.media && '--skip-media' || '' }}
-          ${{ inputs.prepare_review && '--prepare-review' || '' }}
+          REQUIRE_ATTACHED: ${{ inputs.require_attached }}
+        run: python3 -u scripts/verify_store_reflection.py
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: store-reflection-verification
+          path: store-reflection-verification.json
+          retention-days: 7
