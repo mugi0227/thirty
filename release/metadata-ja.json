@@ -1,0 +1,28 @@
+{
+  "bundle_id": "jp.mugilab.thirty",
+  "locale": "ja",
+  "app_info": {
+    "name": "Thirty - とりあえず30分タイマー",
+    "subtitle": "スマホが、そのままバータイマーに",
+    "privacy_policy_url": "https://github.com/mugi0227/thirty/blob/main/docs/release/privacy-policy.md",
+    "primary_category": "PRODUCTIVITY",
+    "secondary_category": "UTILITIES"
+  },
+  "version": {
+    "copyright": "2026 mugilab",
+    "support_url": "https://github.com/mugi0227/thirty/blob/main/docs/release/support.md",
+    "marketing_url": "https://github.com/mugi0227/thirty",
+    "promotional_text": "やるべきことがあるのに、SNSを見てしまう日に。考える前にスタートを押せば、あとは減っていく棒を眺めるだけ。タイマーは無料、広告もありません。",
+    "keywords": "集中,勉強,作業,ポモドーロ,バータイマー,ビジュアルタイマー,キッチンタイマー,アクセスガイド,SNS,やる気,カウントダウン,時間管理,ダラダラ,サーティ",
+    "description_file": "release/description-ja.txt",
+    "review_notes_file": "release/review-notes-en.txt"
+  },
+  "screenshots": {
+    "APP_IPHONE_61": "docs/release/store/iphone-medium",
+    "APP_IPHONE_67": "docs/release/store/iphone-large",
+    "APP_IPAD_PRO_3GEN_129": "docs/release/store/ipad-13"
+  },
+  "previews": {
+    "IPHONE_67": "docs/release/store/app-preview-iphone-6.9.mp4"
+  }
+}

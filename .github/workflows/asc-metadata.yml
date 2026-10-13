@@ -1,0 +1,32 @@
+name: Fill App Store listing
+# Writes the listing text and uploads screenshots and the app preview to App
+# Store Connect from release/metadata-ja.json. Runs on Linux; no Mac needed.
+# Uses the same secrets as "Upload to App Store Connect".
+on:
+  workflow_dispatch:
+    inputs:
+      media:
+        description: Replace screenshots and the app preview too
+        type: boolean
+        default: true
+      dry_run:
+        description: Only show what would change
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  listing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
+      - name: Update App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: >-
+          python3 scripts/asc_metadata.py release/metadata-ja.json
+          ${{ inputs.dry_run && '--dry-run' || '' }} ${{ !inputs.media && '--skip-media' || '' }}
