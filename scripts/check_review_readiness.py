@@ -25,7 +25,13 @@ def related(resource, name):
     if isinstance(url, dict):
         url = url.get('href')
     if url and url.startswith(API + '/'):
-        return get(url[len(API):])
+        result = get(url[len(API):])
+        next_url = result.get('links', {}).get('next')
+        while next_url and next_url.startswith(API + '/'):
+            page = get(next_url[len(API):])
+            result.setdefault('data', []).extend(page.get('data', []))
+            next_url = page.get('links', {}).get('next')
+        return result
     return {}
 
 version = next(v for v in get(f'/v1/apps/{app_id}/appStoreVersions', **{'filter[platform]': 'IOS', 'limit': 10})['data']
@@ -59,13 +65,26 @@ report['purchases'] = []
 for purchase in purchases:
     item = {'attributes': purchase['attributes'], 'relationships': list(purchase.get('relationships', {}))}
     for name in ('inAppPurchaseLocalizations', 'appStoreReviewScreenshot', 'inAppPurchaseAvailability',
-                 'priceSchedule', 'inAppPurchasePriceSchedule', 'inAppPurchaseVersions'):
+                 'iapPriceSchedule', 'versions'):
         result = related(purchase, name)
         if result:
             data = result.get('data')
             objects = data if isinstance(data, list) else [data] if data else []
             item[name] = [{'type': obj.get('type'), 'attributes': obj.get('attributes'),
                            'relationships': list(obj.get('relationships', {}))} for obj in objects]
+            if name == 'inAppPurchaseAvailability' and objects:
+                territories = related(objects[0], 'availableTerritories').get('data', [])
+                item['available_territories'] = [obj['id'] for obj in territories]
+            if name == 'iapPriceSchedule' and objects:
+                prices = related(objects[0], 'manualPrices').get('data', [])
+                item['manual_prices'] = []
+                for price in prices:
+                    territory = related(price, 'territory').get('data')
+                    if territory and territory['id'] == 'JPN':
+                        point = related(price, 'inAppPurchasePricePoint').get('data')
+                        item['japan_price'] = point['attributes'] if point else None
+                    item['manual_prices'].append({'territory': territory['id'] if territory else None,
+                                                  'attributes': price.get('attributes')})
     # Review screenshot is documented even if Apple omits its related link.
     if 'appStoreReviewScreenshot' not in item:
         shot = get(f"/v2/inAppPurchases/{purchase['id']}/appStoreReviewScreenshot").get('data')
@@ -77,10 +96,25 @@ for name in ('inAppPurchases', 'inAppPurchasesV2', 'inAppPurchaseVersions'):
     if data:
         report['version_' + name] = [{'type': obj.get('type'), 'attributes': obj.get('attributes')} for obj in data.get('data', [])]
 
+report['review_submissions'] = []
+submissions = related(app, 'reviewSubmissions').get('data', [])
+for submission in submissions:
+    items = get(f"/v1/reviewSubmissions/{submission['id']}/items").get('data', [])
+    report['review_submissions'].append({'attributes': submission['attributes'],
+        'items': [{'attributes': item['attributes'], 'relationships': list(item.get('relationships', {}))} for item in items]})
 report['app_relationships'] = list(app.get('relationships', {}))
-availability = related(app, 'appAvailabilityV2') or related(app, 'appAvailability')
-if availability:
-    report['app_availability'] = availability.get('data', {}).get('attributes')
+relation = app.get('relationships', {}).get('appAvailabilityV2', {})
+linkage_url = relation.get('links', {}).get('self')
+if linkage_url and linkage_url.startswith(API + '/'):
+    linkage = get(linkage_url[len(API):]).get('data')
+    report['app_availability_linkage_present'] = bool(linkage)
+    if linkage:
+        resource = get(f"/v2/appAvailabilities/{linkage['id']}").get('data')
+        if resource:
+            report['app_availability'] = resource.get('attributes')
+            territories = related(resource, 'territoryAvailabilities').get('data', [])
+            report['territory_availability'] = [{'attributes': obj['attributes'],
+                'territory': obj.get('relationships', {}).get('territory', {}).get('data')} for obj in territories]
 Path('app-review-readiness.json').write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding='utf-8')
 print(json.dumps({'version': report.get('version'), 'build': report.get('build'),
                   'review_contact_fields_present': report.get('review_contact_fields_present'),
