@@ -176,6 +176,9 @@ struct PlusView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(perk.1).font(.headline)
                                     Text(perk.2).font(.subheadline).foregroundStyle(.secondary)
+                                    if perk.0 == "lock.iphone" {
+                                        IslandSample().padding(.top, 8)
+                                    }
                                 }
                             }
                         }
@@ -232,5 +235,26 @@ struct PlusBuyButtons: View {
                 Text(message).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
         }
+    }
+}
+
+/// A picture of the Live Activity in the Dynamic Island, so "the black area
+/// at the top of the screen" is clear before buying.
+struct IslandSample: View {
+    private let amber = LCDPalette.colors(for: "amber").ink
+
+    var body: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 2) {
+                ForEach(0..<24, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 1).fill(index < 17 ? amber : amber.opacity(0.15)).frame(width: 3)
+                }
+            }
+            .frame(height: 24)
+            Text("21:47").font(.system(size: 20, weight: .light, design: .monospaced)).foregroundStyle(amber)
+        }
+        .padding(.horizontal, 18).padding(.vertical, 12)
+        .background(Color.black, in: Capsule())
+        .accessibilityHidden(true)
     }
 }
