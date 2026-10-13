@@ -53,7 +53,10 @@ def find_events(frames):
     gray = frames[:, ::4, ::4].mean(axis=3)
     diff = np.abs(np.diff(gray, axis=0)).mean(axis=(1, 2))
     start = next(i for i in range(FPS, len(diff)) if diff[i] > 10) + 1
-    finish = next(i for i in range(start + 8 * FPS, len(diff)) if diff[i] > 4.5) + 1
+    finish = next((i for i in range(start + 8 * FPS, len(diff)) if diff[i] > 4.5), None)
+    if finish is None:
+        sys.exit("The recording ends before the finish screen; record longer.")
+    finish += 1
     return start / FPS, finish / FPS
 
 

@@ -42,7 +42,12 @@ final class StoreScreenshotTests: XCTestCase {
 
     private func closeHint(_ app: XCUIApplication) {
         let close = app.buttons["ボタンの案内を閉じる"]
-        if close.waitForExistence(timeout: 2) { close.tap() }
+        // A tap during the start animation can be missed, so check again.
+        guard close.waitForExistence(timeout: 2) else { return }
+        for _ in 0..<3 where close.exists {
+            close.tap()
+            sleep(1)
+        }
     }
 
     private func startRunning(_ app: XCUIApplication, closingHint: Bool = true) {
