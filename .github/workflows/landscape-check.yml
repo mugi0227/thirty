@@ -1,0 +1,64 @@
+name: Check landscape spacing
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/center-landscape
+permissions:
+  contents: read
+concurrency:
+  group: landscape-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - run: brew install xcodegen
+      - name: Compile the app and verify timer behavior
+        working-directory: ios
+        run: |
+          xcodegen generate
+          swift test
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath ../build \
+            CODE_SIGNING_ALLOWED=NO build -quiet
+          swift ../scripts/ci/check_localizations.swift ../build/Build/Products/Release-iphoneos/Thirty.app \
+            ../build/Build/Products/Release-iphoneos/Thirty.app/PlugIns/ThirtyWidgets.appex
+          xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath ../build-sim \
+            CODE_SIGNING_ALLOWED=NO build-for-testing -quiet
+      - name: Capture timer screens on iPhone and iPad
+        working-directory: ios
+        run: |
+          set -eo pipefail
+          mkdir -p ../landscape-screenshots
+          for device in 'iPhone 17' 'iPad Pro 13-inch (M5)'; do
+            udid=$(python3 ../scripts/ci/boot_localization_sim.py "$device" | tail -1)
+            slug=$(echo "$device" | tr -cs '[:alnum:]' '-')
+            for appearance in light dark; do
+              xcrun simctl ui "$udid" appearance "$appearance"
+              mkdir -p "../landscape-screenshots/$slug/$appearance"
+              TEST_RUNNER_SCREENSHOT_DIR="$PWD/../landscape-screenshots/$slug/$appearance" \
+                xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
+                -destination "id=$udid" -derivedDataPath ../build-sim \
+                -parallel-testing-enabled NO -test-timeouts-enabled YES \
+                -maximum-test-execution-time-allowance 180 \
+                -only-testing:ThirtyUITests/ScreenshotTests/testTimerScreens \
+                CODE_SIGNING_ALLOWED=NO test-without-building \
+                > "../landscape-$slug$appearance.log" 2>&1
+              grep -E 'Test Case.*(passed|failed)|error:|TEST (SUCCEEDED|FAILED)' "../landscape-$slug$appearance.log"
+            done
+            xcrun simctl shutdown "$udid"
+          done
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: Thirty-landscape-verification
+          path: |
+            landscape-screenshots/
+            landscape-*.log
+          retention-days: 14
