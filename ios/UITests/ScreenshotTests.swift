@@ -56,7 +56,7 @@ final class ScreenshotTests: XCTestCase {
     }
 
     func testTimerScreens() {
-        let app = launch(["-onboardingSeen.v3", "YES"])
+        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyNoPrompt", "YES"])
         XCTAssertTrue(app.buttons["開始"].waitForExistence(timeout: 10))
         shot("05-ready")
 
@@ -64,6 +64,7 @@ final class ScreenshotTests: XCTestCase {
         sleep(1)
         touchBars(app) // lets the interruption monitor answer the notification prompt
         sleep(2)
+        if app.buttons["ボタンの案内を閉じる"].exists { app.buttons["ボタンの案内を閉じる"].tap() }
         shot("06-running")
         sleep(6)
         shot("07-running-idle")
@@ -73,6 +74,8 @@ final class ScreenshotTests: XCTestCase {
         touchBars(app)
         sleep(1)
         shot("08-landscape")
+        sleep(6)
+        shot("08b-landscape-idle")
         XCUIDevice.shared.orientation = .portrait
         sleep(2)
 
@@ -83,7 +86,7 @@ final class ScreenshotTests: XCTestCase {
             shot("09-forced-landscape")
             app.buttons["縦向きに戻す"].tap()
             sleep(2)
-        } else {
+        } else if UIDevice.current.userInterfaceIdiom == .phone {
             XCTFail("Rotate button missing")
         }
 

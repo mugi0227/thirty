@@ -69,12 +69,18 @@ struct TimerView: View {
     var body: some View {
         GeometryReader { geometry in
             let landscape = geometry.size.width > geometry.size.height
+            let idleLandscape = landscape && chromeHidden
+            // The home indicator keeps a safe-area inset even while hidden.
+            // Balance the physical screen margins, not only the safe rectangle.
+            let verticalSafeInset = max(geometry.safeAreaInsets.top, geometry.safeAreaInsets.bottom)
             ZStack {
                 skin.lcd.ignoresSafeArea()
                 Group {
                     if landscape { landscapeLayout(geometry.size) } else { portraitLayout }
                 }
-                .padding(.horizontal, landscape ? 20 : 16).padding(.bottom, landscape ? 12 : 16)
+                .padding(.horizontal, landscape ? 20 : 16)
+                .padding(.top, idleLandscape ? 12 + verticalSafeInset - geometry.safeAreaInsets.top : 0)
+                .padding(.bottom, idleLandscape ? 12 + verticalSafeInset - geometry.safeAreaInsets.bottom : landscape ? 12 : 16)
                 if showHint && guideStart == nil && !model.isGuidedAccessActive && model.countdown.phase == .running {
                     ButtonHint(kind: hardwareButton) { showHint = false }
                 }
@@ -159,8 +165,8 @@ struct TimerView: View {
     }
 
     private func landscapeLayout(_ size: CGSize) -> some View {
-        VStack(spacing: 4) {
-            topBar(landscape: true)
+        VStack(spacing: chromeHidden ? 0 : 4) {
+            if !chromeHidden { topBar(landscape: true) }
             HStack(spacing: 24) {
                 SlatBars(lit: ritualLit ?? model.bars, count: model.effectiveSlats, stacked: false)
                 Rectangle().fill(skin.line).frame(width: 1.5)
