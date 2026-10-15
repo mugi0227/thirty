@@ -17,6 +17,8 @@ import argparse
 import hashlib
 import json
 import os
+import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -206,6 +208,19 @@ def check_media_files(config):
     for file in config.get("previews", {}).values():
         if not (ROOT / file).is_file() or (ROOT / file).stat().st_size == 0:
             raise SystemExit(f"Missing preview: {file}")
+    provenance = ROOT / "docs/release/store/provenance.json"
+    if not provenance.is_file():
+        raise SystemExit("Media provenance is missing. Select a successful Build iOS media_run_id.")
+    source = json.loads(provenance.read_text()).get("commit", "")
+    if not re.fullmatch(r"[0-9a-f]{40}", source):
+        raise SystemExit("Invalid media source commit")
+    if subprocess.run(["git", "cat-file", "-e", source + "^{commit}"], cwd=ROOT,
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
+        subprocess.run(["git", "fetch", "--depth=1", "origin", source], cwd=ROOT, check=True)
+    if subprocess.run(["git", "diff", "--quiet", source, "--", "ios/Thirty", "ios/Shared", "ios/Widgets", "ios/project.yml"],
+                      cwd=ROOT).returncode:
+        raise SystemExit("Media was captured from different app code. Generate media for the current app first.")
+    print(f"Media source matches the app code ({source})")
 
 
 AGE_RATING_NONE = ["alcoholTobaccoOrDrugUseOrReferences", "contests", "gamblingSimulated", "gunsOrOtherWeapons",

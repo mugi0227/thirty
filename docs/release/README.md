@@ -91,3 +91,13 @@ Dynamic Islandの場面では上端を固定して最大1.5倍まで拡大し、
 5. `dry_run=true` で変更対象を確認し、その後 `dry_run=false` で掲載情報を保存します。`prepare_review` は価格・年齢制限・ビルド選択も更新するため、素材だけ更新する場合は `false` にします。
 
 このワークフローはApp Reviewへの提出を行いません。提出前に、最新のTestFlightビルドと実際に購入できるThirty+（`jp.mugilab.thirty.diagnostic`）が審査対象になっていることを確認します。
+
+### 「審査へ追加済み・未提出」から素材を更新する場合
+
+Appleの `READY_FOR_REVIEW` では画像・動画を編集できません（[App and submission statuses](https://developer.apple.com/help/app-store-connect/reference/app-and-submission-statuses/)）。
+`Fill App Store listing` の `draft_action=inspect` で未提出であることを確認し、`reopen` でこのアプリ版だけを下書きから外します。`dry_run=true` なら変更しません。実際に編集状態へ戻す場合は `dry_run=false` にします。
+
+その後 `draft_action=listing` と成功した `media_run_id` で素材を更新します。素材の元コミットと現在のアプリ製品コードが違う場合は、外部への変更前に停止します。
+`draft_action=finish` と確認済みの `target_build` を指定すると、画像と動画の処理完了を確認して、そのビルドとアプリが実際に使うThirty+を下書きへ追加します。旧商品の審査項目は、新しい商品の追加が成功してから外します。
+
+この操作は未提出の下書きだけを対象にします。送信済み・審査中の版には対応せず、App Reviewへの送信は行いません。
