@@ -15,7 +15,7 @@
 | App Reviewへのメモ、App内課金の情報 | [review-notes.md](review-notes.md) | 下書き済み |
 | プライバシーマニフェスト | `ios/Thirty/PrivacyInfo.xcprivacy`、`ios/Widgets/PrivacyInfo.xcprivacy` | 追加済み（追跡なし、収集なし、UserDefaultsの理由 CA92.1） |
 | 暗号化の申告 | `ITSAppUsesNonExemptEncryption = NO` | 設定済み |
-| バージョン | 1.0.0（ビルド1） | 設定済み |
+| バージョン | 1.0.0（ビルド番号はリリースCIで自動採番） | 設定済み |
 
 ## Appleの要件で確認したこと
 
@@ -101,3 +101,5 @@ Appleの `READY_FOR_REVIEW` では画像・動画を編集できません（[App
 `draft_action=finish` と確認済みの `target_build` を指定すると、画像と動画の処理完了を確認して、そのビルドとアプリが実際に使うThirty+を下書きへ追加します。旧商品の審査項目は、新しい商品の追加が成功してから外します。
 
 この操作は未提出の下書きだけを対象にします。送信済み・審査中の版には対応せず、App Reviewへの送信は行いません。
+
+掲載画像は、基本のタイマー・横向き・アクセスガイドに続いて、休憩とマイセットを案内する順序です。`release/metadata-ja.json` の `screenshot_order` で指定します。

@@ -162,8 +162,10 @@ def upload(client, kind, set_type, set_id, path, extra):
 
 def replace_media(client, localization_id, config):
     sets = client.get(f"/v1/appStoreVersionLocalizations/{localization_id}/appScreenshotSets")["data"]
+    order = {name: index for index, name in enumerate(config.get("screenshot_order", []))}
     for display_type, folder in config["screenshots"].items():
         files = sorted((ROOT / folder).glob("*.png"))
+        files.sort(key=lambda path: (order.get(path.stem, len(order)), path.name))
         existing = next((s for s in sets if s["attributes"]["screenshotDisplayType"] == display_type), None)
         if existing:
             for shot in client.get(f"/v1/appScreenshotSets/{existing['id']}/appScreenshots")["data"]:
@@ -178,6 +180,7 @@ def replace_media(client, localization_id, config):
         client.patch(f"/v1/appScreenshotSets/{set_id}/relationships/appScreenshots",
                      {"data": [{"type": "appScreenshots", "id": i} for i in ids]})
         print(f"  {display_type}: {len(ids)} screenshots from {folder}")
+        print("    order:", ", ".join(path.stem for path in files))
 
     preview_sets = client.get(f"/v1/appStoreVersionLocalizations/{localization_id}/appPreviewSets")["data"]
     for preview_type, file in config.get("previews", {}).items():

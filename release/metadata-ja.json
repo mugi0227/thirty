@@ -17,6 +17,10 @@
     "description_file": "release/description-ja.txt",
     "review_notes_file": "release/review-notes-en.txt"
   },
+  "screenshot_order": [
+    "01-running", "02-landscape", "03-guided-access", "08-break", "09-saved-sets",
+    "07-dynamic-island", "05-skin-night", "06-lock-screen", "06-skins", "04-finished"
+  ],
   "screenshots": {
     "APP_IPHONE_61": "docs/release/store/iphone-medium",
     "APP_IPHONE_67": "docs/release/store/iphone-large",
