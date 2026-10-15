@@ -6,7 +6,7 @@ import StoreKit
 /// and ad-free; Thirty+ unlocks the extra skins.
 @MainActor
 final class Store: ObservableObject {
-    static let plusID = "jp.mugilab.thirty.plus"
+    static let plusID = PlusProducts.purchaseID
     private static let cacheKey = "hasPlus.cache"
 
     @Published private(set) var product: Product?
@@ -75,7 +75,9 @@ final class Store: ObservableObject {
         do {
             switch try await product.purchase() {
             case .success(let verification):
-                if case .verified(let transaction) = verification {
+                if case .verified(let transaction) = verification,
+                   PlusProducts.hasAccess([PlusEntitlement(productID: transaction.productID,
+                                                          isRevoked: transaction.revocationDate != nil)]) {
                     await transaction.finish()
                     setPlus(true)
                     message = nil
@@ -116,19 +118,22 @@ final class Store: ObservableObject {
     }
 
     private func refreshEntitlements() async {
-        var owned = false
+        var entitlements: [PlusEntitlement] = []
         for await result in StoreKit.Transaction.currentEntitlements {
-            if case .verified(let transaction) = result, transaction.productID == Self.plusID, transaction.revocationDate == nil {
-                owned = true
+            if case .verified(let transaction) = result {
+                entitlements.append(PlusEntitlement(productID: transaction.productID,
+                                                    isRevoked: transaction.revocationDate != nil))
             }
         }
-        setPlus(owned)
+        setPlus(PlusProducts.hasAccess(entitlements))
     }
 
     private func handle(_ result: VerificationResult<StoreKit.Transaction>) async {
-        guard case .verified(let transaction) = result else { return }
+        guard case .verified(let transaction) = result,
+              PlusProducts.recognizes(transaction.productID) else { return }
         await transaction.finish()
-        if transaction.productID == Self.plusID { setPlus(transaction.revocationDate == nil) }
+        // A refund of one product must not revoke an active purchase of the other.
+        await refreshEntitlements()
     }
 
     private func setPlus(_ owned: Bool) {

@@ -7,7 +7,7 @@
 | 項目 | 内容 |
 | --- | --- |
 | 無料 | タイマー、縦横のレイアウト、アクセスガイドの案内、クラシックのスキン。広告なし |
-| Thirty+ | 買い切り（非消耗型）。製品ID `jp.mugilab.thirty.plus`。価格は¥500 |
+| Thirty+ | 買い切り（非消耗型）。製品ID `jp.mugilab.thirty.diagnostic`。価格は¥500 |
 | 現在の特典 | 5種類のスキン、ロック画面・StandBy・Dynamic Islandへの表示、終了音4種類、休憩をはさんだくり返し、棒60本、分だけの表示、アプリアイコン5種類 |
 | 無料のまま | 始めやすくする機能（すぐスタート、ショートカット、コントロールセンター、ウィジェット）と終了画面。アプリの目的そのものなので課金の対象にしない |
 | 試着 | スキン画面で、購入前にロックされたスキンを大きく表示して試せる |
@@ -15,6 +15,8 @@
 | 復元 | スキン画面の「購入を復元」（`AppStore.sync`） |
 
 実装は [Store.swift](../ios/Thirty/Store.swift)（StoreKit 2）、[Skin.swift](../ios/Thirty/Skin.swift)、[SkinPicker.swift](../ios/Thirty/SkinPicker.swift) です。
+2026年10月15日、実機のSandboxで取得できることを確認した既存の商品レコードを正式なThirty+として採用しました。
+旧ID `jp.mugilab.thirty.plus` の購入履歴も、署名検証済みで取り消されていなければ復元できます。
 Xcodeでの実行時は [Thirty.storekit](../ios/Thirty.storekit) を使い、App Store Connectなしで購入を試せます。
 配布する前に、App Store Connectで同じ製品IDの非消耗型App内課金を作成し、価格を決める必要があります。
 

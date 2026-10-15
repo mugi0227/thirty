@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - codex/purchase-retry
+      - codex/purchase-working-product
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,7 +13,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - name: Test retry after empty response and failure
+      - name: Test product retries and current and legacy purchase entitlements
         working-directory: ios
         run: swift test
       - name: Generate Xcode project
