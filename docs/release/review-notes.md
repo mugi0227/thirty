@@ -6,9 +6,11 @@ Thirty is a single-screen focus timer. No account or login is needed.
 
 - Start: tap the play button. The whole screen becomes a bar timer; controls hide after 4 seconds and come back with a tap.
 - Guided Access: the app only explains how to turn on the system's Guided Access feature (Settings > Accessibility > Guided Access) and shows which button to triple-click. It does not start or detect the setting by itself, and the timer works without it.
-- In-app purchase "Thirty+" (non-consumable, jp.mugilab.thirty.diagnostic) unlocks extra skins, end sounds, a break cycle, display options, alternate icons and the Live Activity. Open it from the palette icon or Settings (gear icon) > "Thirty+ でできること". "購入を復元" restores purchases.
+- In-app purchase "Thirty+" (non-consumable, jp.mugilab.thirty.diagnostic) unlocks extra skins, end sounds, repeat, optional breaks, saved timer sets, display options, alternate icons and the Live Activity. Open it from the palette icon or Settings (gear icon) > "Thirty+ でできること". "購入を復元" restores purchases.
 - The Live Activity (Lock Screen, StandBy, Dynamic Island) appears while a timer runs after purchasing Thirty+.
-- Local notifications are used only to tell the user the timer has finished.
+- Repeat and breaks: the repeat button is to the left of Play, and the cup button to the right. Tap the cup to choose common break lengths, or hold it to choose 1–60 minutes. With repeat off, focus → optional break → finish. With repeat on, the same sequence repeats. During a break, the bars become a pixel coffee cup.
+- My Sets: tap the time while stopped, then save the current time, break length and repeat setting. Up to eight sets can be saved; hold a saved set to delete it.
+- Local notifications announce the end of focus and break segments. No server, account or login is required.
 
 日本語の補足：タイマー本体は無料で、広告はありません。アクセスガイドはiOS標準機能の案内のみです。
 
@@ -35,7 +37,7 @@ Where to find it: tap the palette icon (top right) or the gear icon > "Thirty+ �
 
 What it unlocks immediately:
 - 5 extra skins (Paper, Mint, Amber, Night Blue, Ruby). Locked skins can be previewed before buying.
-- End sounds, break cycle, 60 slats, minutes-only display, alternate app icons (Settings).
+- End sounds, 60 slats, minutes-only display, alternate app icons (Settings). Repeat and breaks are beside Play; saved sets are in the time picker.
 - Live Activity on the Lock Screen / Dynamic Island while a timer runs.
 
 No account or server is involved.

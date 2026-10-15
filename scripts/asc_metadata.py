@@ -193,6 +193,21 @@ def replace_media(client, localization_id, config):
         print(f"  {preview_type}: app preview {file}")
 
 
+def check_media_files(config):
+    # Check every local file before replacing any remote set. In particular,
+    # never empty a listing because the selected artifact was not downloaded.
+    for display_type, folder in config["screenshots"].items():
+        files = sorted((ROOT / folder).glob("*.png"))
+        if not 1 <= len(files) <= 10:
+            raise SystemExit(f"{display_type}: expected 1–10 screenshots in {folder}, got {len(files)}")
+        for path in files:
+            if path.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
+                raise SystemExit(f"Invalid screenshot: {path}")
+    for file in config.get("previews", {}).values():
+        if not (ROOT / file).is_file() or (ROOT / file).stat().st_size == 0:
+            raise SystemExit(f"Missing preview: {file}")
+
+
 AGE_RATING_NONE = ["alcoholTobaccoOrDrugUseOrReferences", "contests", "gamblingSimulated", "gunsOrOtherWeapons",
                    "horrorOrFearThemes", "matureOrSuggestiveThemes", "medicalOrTreatmentInformation",
                    "profanityOrCrudeHumor", "sexualContentGraphicAndNudity", "sexualContentOrNudity",
@@ -279,6 +294,8 @@ def main():
     parser.add_argument("--prepare-review", action="store_true")
     args = parser.parse_args()
     config = json.loads((ROOT / args.config).read_text(encoding="utf-8"))
+    if not args.skip_media:
+        check_media_files(config)
     client = Client(args.dry_run)
     apps = client.get("/v1/apps", **{"filter[bundleId]": config["bundle_id"]})["data"]
     if not apps:

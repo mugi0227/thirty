@@ -5,6 +5,10 @@ name: Fill App Store listing
 on:
   workflow_dispatch:
     inputs:
+      media_run_id:
+        description: Successful Build iOS run containing the new app-review-media artifact (blank uses committed media)
+        type: string
+        default: ''
       media:
         description: Replace screenshots and the app preview too
         type: boolean
@@ -19,12 +23,38 @@ on:
         default: false
 permissions:
   contents: read
+  actions: read
 jobs:
   listing:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+      - name: Verify the selected media run
+        if: inputs.media && inputs.media_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEDIA_RUN_ID: ${{ inputs.media_run_id }}
+        run: |
+          [[ "$MEDIA_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$MEDIA_RUN_ID" > "$RUNNER_TEMP/media-run.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          run = json.loads((Path(os.environ['RUNNER_TEMP']) / 'media-run.json').read_text())
+          assert run['conclusion'] == 'success', 'Media run must have passed'
+          assert run['path'] == '.github/workflows/ios.yml', 'Expected the Build iOS workflow'
+          print('Using verified media from', run['html_url'], 'commit', run['head_sha'])
+          PY
+          rm -rf docs/release/store/iphone-medium docs/release/store/iphone-large docs/release/store/ipad-13
+          rm -f docs/release/store/app-preview-iphone-6.9.mp4
+      - uses: actions/download-artifact@v5
+        if: inputs.media && inputs.media_run_id != ''
+        with:
+          name: app-review-media
+          path: docs/release/store
+          run-id: ${{ inputs.media_run_id }}
+          github-token: ${{ github.token }}
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
       - name: Update App Store Connect
         env:

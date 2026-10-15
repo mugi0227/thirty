@@ -22,14 +22,16 @@ CAPTIONS = {
     "06-lock-screen": ("閉じても、残りが見える", "ロック画面と StandBy に表示（Thirty+）"),
     "07-dynamic-island": ("ほかのアプリの最中も", "画面の上に、減っていく棒と残り時間（Thirty+）"),
     "06-skins": ("気分でスキンを選べる", "購入前に試着できます（Thirty+）"),
+    "08-break": ("ひと息ついたら、もうひと頑張り", "作業と休憩を、自分のリズムで（Thirty+）"),
+    "09-saved-sets": ("いつもの時間を、ひと押しで", "時間・休憩・くり返しをマイセットに（Thirty+）"),
 }
 BACKGROUND = (184, 193, 170)
 INK = (28, 35, 29)
 
 # Japanese typefaces only: a Chinese fallback draws 置, 直 and others with
 # different strokes. Zen Kaku Gothic New / Zen Old Mincho (OFL) are fetched by
-# scripts/fetch_fonts.sh; Hiragino Sans is the fallback on macOS.
-FONT_DIR = Path(os.environ.get("STORE_FONT_DIR", Path(__file__).resolve().parent / "fonts"))
+# the repository; Hiragino Sans is the fallback on macOS.
+FONT_DIR = Path(os.environ.get("STORE_FONT_DIR", Path(__file__).resolve().parents[1] / "assets/store-fonts"))
 STYLE = os.environ.get("STORE_FONT", "gothic")
 FONT_FILES = {
     ("gothic", "bold"): ["ZenKakuGothicNew-Bold.ttf", "/System/Library/Fonts/ヒラギノ角ゴシック W7.ttc"],

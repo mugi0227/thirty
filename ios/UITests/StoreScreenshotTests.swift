@@ -24,6 +24,18 @@ final class StoreScreenshotTests: XCTestCase {
         try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
     }
 
+    override func tearDown() {
+        // Return the app to the foreground after Island/Lock Screen captures so
+        // the next launch does not have to terminate a suspended process.
+        let app = XCUIApplication()
+        if app.state != .notRunning {
+            app.activate()
+            app.terminate()
+        }
+        XCUIDevice.shared.orientation = .portrait
+        super.tearDown()
+    }
+
     /// The Simulator posts its own notices (such as Apple Intelligence setup) on
     /// the Lock Screen. Swipe them away so the capture keeps the full screen.
     private func clearNotifications(_ springboard: XCUIApplication) {
@@ -77,11 +89,33 @@ final class StoreScreenshotTests: XCTestCase {
     }
 
     func test3Finished() {
-        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyTimeScale", "900"])
+        // Jump straight to the deadline; no accelerated clock or CPU race.
+        // Keep 30 minutes as the configured duration for the "one more" label.
+        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyJumpAfterStart", "1800"])
         startRunning(app, closingHint: false) // the hint leaves by itself at the end
-        XCTAssertTrue(app.buttons["おしまい"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["おしまい"].waitForExistence(timeout: 30))
         sleep(1)
         shot("04-finished")
+    }
+
+    func test6BreakAndSavedSets() {
+        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES",
+                          "-ThirtyDemoSeconds", "1500", "-ThirtyJumpAfterStart", "1500",
+                          "-breakLength", "5", "-repeatEnabled", "YES"])
+        XCTAssertTrue(app.buttons["時間を変更"].waitForExistence(timeout: 15))
+        app.buttons["時間を変更"].tap()
+        XCTAssertTrue(app.buttons["save-set"].waitForExistence(timeout: 10))
+        app.buttons["save-set"].tap()
+        let saved = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", "25分", "くり返し")).firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 5))
+        sleep(1)
+        shot("09-saved-sets")
+        app.buttons["時間を決定"].tap()
+        startRunning(app)
+        XCTAssertTrue(app.staticTexts["休憩"].waitForExistence(timeout: 15))
+        closeHint(app)
+        sleep(5)
+        shot("08-break")
     }
 
     func test4Skin() {
