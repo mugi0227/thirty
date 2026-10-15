@@ -28,7 +28,7 @@ final class LiveActivityAppearanceTests: XCTestCase {
                                           space: CGColorSpace(name: CGColorSpace.sRGB)!,
                                           bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)
             else { return false }
-            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
             let pixels = buffer.bindMemory(to: UInt8.self)
             let target = [Int((hex >> 16) & 255), Int((hex >> 8) & 255), Int(hex & 255)]
             var count = 0
