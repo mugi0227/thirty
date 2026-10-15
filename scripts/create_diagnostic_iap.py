@@ -6,8 +6,11 @@ The product ID remains reserved by Apple even if the product is later deleted.
 """
 import argparse
 from decimal import Decimal
+import hashlib
 import json
 from pathlib import Path
+import time
+from urllib.parse import urlsplit
 
 import requests
 
@@ -25,6 +28,7 @@ LOCALIZATION = {"locale": "ja", "name": "Thirty 診断用",
 
 class DiagnosticClient(Client):
     diagnostic_id = None
+    review_screenshot_id = None
 
     def post(self, path, body):
         if path == "/v2/inAppPurchases":
@@ -33,7 +37,8 @@ class DiagnosticClient(Client):
         else:
             keys = {"/v1/inAppPurchaseLocalizations": "inAppPurchaseV2",
                     "/v1/inAppPurchaseAvailabilities": "inAppPurchase",
-                    "/v1/inAppPurchasePriceSchedules": "inAppPurchase"}
+                    "/v1/inAppPurchasePriceSchedules": "inAppPurchase",
+                    "/v1/inAppPurchaseAppStoreReviewScreenshots": "inAppPurchaseV2"}
             key = keys.get(path)
             if not key or not self.diagnostic_id:
                 raise RuntimeError("Write endpoint is not allowed")
@@ -44,8 +49,16 @@ class DiagnosticClient(Client):
                     raise RuntimeError("Refusing a price for a different product")
         return super().post(path, body)
 
-    def patch(self, *args, **kwargs):
-        raise RuntimeError("PATCH is not allowed")
+    def patch(self, path, body):
+        expected = f"/v1/inAppPurchaseAppStoreReviewScreenshots/{self.review_screenshot_id}"
+        attributes = body.get("data", {}).get("attributes", {})
+        if (not self.review_screenshot_id or path != expected
+                or body["data"].get("id") != self.review_screenshot_id
+                or body["data"].get("type") != "inAppPurchaseAppStoreReviewScreenshots"
+                or set(attributes) != {"uploaded", "sourceFileChecksum"}
+                or attributes["uploaded"] is not True):
+            raise RuntimeError("Only the diagnostic screenshot upload may be completed")
+        return super().patch(path, body)
 
     def delete(self, *args, **kwargs):
         raise RuntimeError("DELETE is not allowed")
@@ -142,6 +155,55 @@ def prices(client, schedule):
     return output
 
 
+def complete_review_screenshot(client, source_id, identifier):
+    """Copy the existing app screenshot so both products have complete metadata.
+
+    This is a reference image of Thirty+, not a new app purchase flow. The
+    diagnostic product's review note explicitly states it isn't used by the app.
+    """
+    endpoint = f"/v2/inAppPurchases/{identifier}/appStoreReviewScreenshot"
+    screenshot = optional(client, endpoint)
+    if screenshot and screenshot["attributes"].get("assetDeliveryState", {}).get("state") == "COMPLETE":
+        return
+    source = client.get(f"/v2/inAppPurchases/{source_id}/appStoreReviewScreenshot")["data"]
+    if source["attributes"].get("assetDeliveryState", {}).get("state") != "COMPLETE":
+        raise RuntimeError("Reference screenshot is not ready")
+    image = source["attributes"]["imageAsset"]
+    url = image["templateUrl"].replace("{w}", str(image["width"])).replace("{h}", str(image["height"])).replace("{f}", "png")
+    host = urlsplit(url).hostname or ""
+    if urlsplit(url).scheme != "https" or not (host.endswith(".mzstatic.com") or host.endswith(".apple.com")):
+        raise RuntimeError("Unexpected Apple image origin")
+    response = requests.get(url, timeout=60)
+    response.raise_for_status()
+    data = response.content
+    if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise RuntimeError("Reference image was not returned as PNG")
+    if not screenshot:
+        screenshot = client.post("/v1/inAppPurchaseAppStoreReviewScreenshots", {"data": {
+            "type": "inAppPurchaseAppStoreReviewScreenshots", "attributes": {
+                "fileName": "thirty-existing-app-reference.png", "fileSize": len(data)},
+            "relationships": {"inAppPurchaseV2": relationship("inAppPurchases", identifier)}}})["data"]
+    operations = screenshot["attributes"].get("uploadOperations") or []
+    if not operations:
+        raise RuntimeError("Diagnostic screenshot has no upload operations")
+    client.review_screenshot_id = screenshot["id"]
+    for operation in operations:
+        headers = {x["name"]: x["value"] for x in operation.get("requestHeaders", [])}
+        chunk = data[operation["offset"]:operation["offset"] + operation["length"]]
+        requests.request(operation["method"], operation["url"], headers=headers, data=chunk, timeout=60).raise_for_status()
+    client.patch(f"/v1/inAppPurchaseAppStoreReviewScreenshots/{screenshot['id']}", {"data": {
+        "type": "inAppPurchaseAppStoreReviewScreenshots", "id": screenshot["id"], "attributes": {
+            "uploaded": True, "sourceFileChecksum": hashlib.md5(data).hexdigest()}}})
+    for _ in range(15):
+        current = client.get(endpoint)["data"]["attributes"].get("assetDeliveryState", {}).get("state")
+        if current == "COMPLETE":
+            return
+        if current == "FAILED":
+            raise RuntimeError("Diagnostic screenshot processing failed")
+        time.sleep(2)
+    raise RuntimeError("Diagnostic screenshot is still processing; rerun after it finishes")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
@@ -207,6 +269,7 @@ def main():
         client.post("/v1/inAppPurchasePriceSchedules", payloads["/v1/inAppPurchasePriceSchedules"])
     elif {k: Decimal(v) for k, v in current_prices.items()} != {k: Decimal(v) for k, v in source_prices.items()}:
         raise RuntimeError("Existing diagnostic prices differ; refusing to overwrite them")
+    complete_review_screenshot(client, source["id"], identifier)
     after = source_snapshot(client, identifier)
     actual_prices = prices(client, after["price_schedule_id"])
     if after["territories"] != before["territories"] or after["availableInNewTerritories"] != before["availableInNewTerritories"]:
