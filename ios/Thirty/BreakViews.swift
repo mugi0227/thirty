@@ -89,10 +89,27 @@ struct CoffeeCup: View {
     }
 }
 
-/// The small cup on the break button.
-struct CoffeeIcon: View {
-    var color: Color?
-    private static let art = [
+/// Small dot pictures for the controls. Every icon is drawn at the same dot
+/// size, so they read as one display.
+enum PixelArt {
+    static let play = ["#.....", "##....", "###...", "####..", "#####.", "######",
+                       "#####.", "####..", "###...", "##....", "#....."]
+    static let pause = Array(repeating: "###..###", count: 11)
+    static let stop = Array(repeating: "#########", count: 9)
+    static let repeatLoop = [
+        ".........#...",
+        ".........##..",
+        "..##########.",
+        ".#.......##..",
+        ".#.......#.#.",
+        ".#.........#.",
+        ".#.#.......#.",
+        "..##.......#.",
+        ".##########..",
+        "..##.........",
+        "...#.........",
+    ]
+    static let coffee = [
         "..#..#....",
         ".#..#.....",
         "..........",
@@ -102,8 +119,68 @@ struct CoffeeIcon: View {
         "#########.",
         ".######...",
     ]
+    static let lock = [".###.", "#...#", "#...#", "#####", "##.##", "##.##", "#####"]
+}
+
+struct PixelIcon: View {
+    let art: [String]
+    var cell: CGFloat = 2.4
+    /// Outside the LCD, or on a filled button, pass the colour.
+    var color: Color?
+
     var body: some View {
-        PixelGrid(cells: Self.art.map { $0.map { $0 == "#" } }, color: color, showsGhost: false, gap: 0)
+        PixelGrid(cells: art.map { $0.map { $0 == "#" } }, color: color, showsGhost: false, gap: 0)
+            .frame(width: CGFloat(art[0].count) * cell, height: CGFloat(art.count) * cell)
+    }
+}
+
+/// "+10" or "−1" in the same segments as the time, unlit segments faintly showing.
+struct SegmentText: View {
+    @Environment(\.skin) private var skin
+    let text: String
+    var height: CGFloat = 18
+
+    var body: some View {
+        HStack(spacing: height * 0.14) {
+            ForEach(Array(text.enumerated()), id: \.offset) { _, character in
+                ZStack {
+                    glyph(character, lit: false).fill(skin.ink.opacity(0.07))
+                    glyph(character, lit: true).fill(skin.ink)
+                }
+                .frame(width: height * 0.55, height: height)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func glyph(_ character: Character, lit: Bool) -> AnyShape {
+        switch character {
+        case "+", "−", "-":
+            let parts: Set<SegmentSign.Part> = character == "+" ? [.bar, .stem] : [.bar]
+            return AnyShape(SegmentSign(parts: lit ? parts : Set(SegmentSign.Part.allCases).subtracting(parts)))
+        default:
+            let segments = SegmentDigit.masks[character.wholeNumberValue ?? 0]
+            return AnyShape(SegmentDigit(segments: lit ? segments : Set(0..<7).subtracting(segments)))
+        }
+    }
+}
+
+/// Plus and minus on the digits' 22×40 grid: the middle bar and a split stem.
+struct SegmentSign: Shape {
+    enum Part: CaseIterable { case bar, stem }
+    let parts: Set<Part>
+
+    func path(in rect: CGRect) -> Path {
+        let outlines: [[(CGFloat, CGFloat)]] = (parts.contains(.bar) ? [[(3, 18), (15, 18), (17, 20), (15, 22), (3, 22), (1, 20)]] : [])
+            + (parts.contains(.stem) ? [[(9, 8), (11, 10), (11, 16), (9, 18), (7, 16), (7, 10)],
+                                         [(9, 22), (11, 24), (11, 30), (9, 32), (7, 30), (7, 24)]] : [])
+        let scaleX = rect.width / 22, scaleY = rect.height / 40
+        var path = Path()
+        for outline in outlines {
+            path.addLines(outline.map { CGPoint(x: rect.minX + ($0.0 + 2) * scaleX, y: rect.minY + $0.1 * scaleY) })
+            path.closeSubpath()
+        }
+        return path
     }
 }
 
@@ -113,11 +190,12 @@ struct RepeatButton: View {
     let isOn: Bool
     let locked: Bool
     var size: CGFloat = 56
+    var cell: CGFloat = 2.4
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "repeat").font(.system(size: 19, weight: .semibold))
+            PixelIcon(art: PixelArt.repeatLoop, cell: cell)
                 .opacity(isOn ? 1 : 0.4)
                 .modeButton(isOn: isOn, locked: locked, size: size, skin: skin)
         }
@@ -134,6 +212,7 @@ struct BreakButton: View {
     let minutes: Int
     let locked: Bool
     var size: CGFloat = 56
+    var cell: CGFloat = 2.4
     let onLocked: () -> Void
     let onChange: (Int) -> Void
     static let choices = [0, 5, 10, 15, 20, 30]
@@ -163,14 +242,16 @@ struct BreakButton: View {
         }
     }
 
+    private var on: Bool { minutes > 0 && !locked }
+
     private var label: some View {
-        VStack(spacing: 2) {
-            CoffeeIcon().frame(width: 22, height: 18)
-            Text(minutes > 0 && !locked ? "\(minutes)" : "–")
-                .font(.system(size: 11, weight: .bold).monospacedDigit())
+        VStack(spacing: cell * 1.5) {
+            PixelIcon(art: PixelArt.coffee, cell: cell)
+            // Off reads as a dash, like an empty LCD field.
+            SegmentText(text: on ? "\(minutes)" : "-", height: cell * 4.5)
         }
-        .opacity(minutes > 0 && !locked ? 1 : 0.4)
-        .modeButton(isOn: minutes > 0 && !locked, locked: locked, size: size, skin: skin)
+        .opacity(on ? 1 : 0.4)
+        .modeButton(isOn: on, locked: locked, size: size, skin: skin)
     }
 }
 
@@ -182,7 +263,7 @@ private extension View {
             .overlay(Circle().stroke(isOn ? .clear : skin.line, lineWidth: 1.5))
             .overlay(alignment: .topTrailing) {
                 if locked {
-                    Image(systemName: "lock.fill").font(.system(size: 10, weight: .bold))
+                    PixelIcon(art: PixelArt.lock, cell: 1.6)
                         .padding(4).background(skin.lcd, in: Circle())
                 }
             }
