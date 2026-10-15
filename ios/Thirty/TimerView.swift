@@ -206,6 +206,7 @@ struct TimerView: View {
     private var digits: some View {
         Button { lastTouch = Date(); if !timing { showTime = true } } label: {
             SevenSegmentTime(text: model.timeText).opacity(blinkOpacity)
+                .contentShape(Rectangle())
                 .overlay(alignment: .topLeading) {
                     if model.isBreak {
                         Text(String(localized: "休憩")).font(.system(size: 13, weight: .bold)).padding(.horizontal, 8).padding(.vertical, 3)

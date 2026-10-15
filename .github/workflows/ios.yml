@@ -190,8 +190,7 @@ jobs:
         with:
           name: app-preview-video
           path: |
-            video/app-preview-iphone.mp4
-            video/test.log
+            video/
           retention-days: 30
 
   app-preview:

@@ -28,6 +28,10 @@ final class StoreScreenshotTests: XCTestCase {
         // Return the app to the foreground after Island/Lock Screen captures so
         // the next launch does not have to terminate a suspended process.
         let app = XCUIApplication()
+        if (testRun?.failureCount ?? 0) > 0 {
+            shot("failure-" + name.replacingOccurrences(of: "/", with: "-"))
+            print(app.debugDescription)
+        }
         if app.state != .notRunning {
             app.activate()
             app.terminate()
@@ -64,8 +68,17 @@ final class StoreScreenshotTests: XCTestCase {
 
     private func startRunning(_ app: XCUIApplication, closingHint: Bool = true) {
         XCTAssertTrue(app.buttons["開始"].waitForExistence(timeout: 10))
-        app.buttons["開始"].tap()
-        if closingHint { closeHint(app) }
+        for _ in 0..<2 {
+            app.buttons["開始"].tap()
+            let started = NSPredicate { _, _ in
+                app.buttons["残り時間"].exists || app.buttons["おしまい"].exists
+            }
+            if XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: started, object: nil)], timeout: 5) == .completed {
+                if closingHint { closeHint(app) }
+                return
+            }
+        }
+        XCTFail("The timer did not start after tapping Play")
     }
 
     func test1Running() {
@@ -186,8 +199,7 @@ final class StoreScreenshotTests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.2)
         }
         sleep(2)
-        app.buttons["開始"].tap()
-        closeHint(app)
+        startRunning(app)
         XCTAssertTrue(app.buttons["おしまい"].waitForExistence(timeout: 40))
         sleep(4)
         FileManager.default.createFile(atPath: directory + "/done", contents: nil)
