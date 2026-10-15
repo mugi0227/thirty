@@ -10,6 +10,11 @@ on:
         description: Inspect current product pricing and app availability through GET requests
         type: boolean
         default: false
+      diagnostic_product:
+        description: Separate diagnostic IAP (plan is GET-only; create reserves a new product ID)
+        type: choice
+        options: [none, plan, create]
+        default: none
       target_build:
         description: Wait for this uploaded build to finish processing (empty skips)
         type: string
@@ -28,7 +33,7 @@ jobs:
       - uses: actions/checkout@v5
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
       - name: Inspect App Review readiness through GET requests only
-        if: ${{ !inputs.iap_diagnosis && !inputs.repair_app_availability }}
+        if: ${{ !inputs.iap_diagnosis && !inputs.repair_app_availability && (inputs.diagnostic_product == 'none' || inputs.diagnostic_product == '') }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -44,12 +49,25 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: python3 -u scripts/set_app_availability.py --apply
       - name: Inspect current In-App Purchase catalog through GET requests only
-        if: ${{ inputs.iap_diagnosis || inputs.repair_app_availability }}
+        if: ${{ inputs.iap_diagnosis || inputs.repair_app_availability || inputs.diagnostic_product == 'create' }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: python3 -u scripts/check_iap_catalog.py
+      - name: Plan or create the separate diagnostic product
+        if: ${{ inputs.diagnostic_product == 'plan' || inputs.diagnostic_product == 'create' }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          DIAGNOSTIC_ACTION: ${{ inputs.diagnostic_product }}
+        run: |
+          if [ "$DIAGNOSTIC_ACTION" = create ]; then
+            python3 -u scripts/create_diagnostic_iap.py --apply
+          else
+            python3 -u scripts/create_diagnostic_iap.py
+          fi
       - uses: actions/upload-artifact@v5
         if: always()
         with:
@@ -58,4 +76,6 @@ jobs:
             app-review-readiness.json
             iap-catalog-diagnosis.json
             app-availability-verification.json
+            diagnostic-iap-plan.json
+            diagnostic-iap-result.json
           retention-days: 7
