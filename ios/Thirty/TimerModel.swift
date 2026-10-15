@@ -17,11 +17,14 @@ enum AppClock {
     static func didStart() {
         offset += UserDefaults.standard.double(forKey: "ThirtyJumpAfterStart")
     }
+    /// App seconds per real second.
+    static var rate: Double { scale }
     /// How far the debug clock runs ahead, so the Live Activity can match the app.
     static var lead: TimeInterval { now().timeIntervalSince(Date()) }
     #else
     static func now() -> Date { Date() }
     static func didStart() {}
+    static var rate: Double { 1 }
     static var lead: TimeInterval { 0 }
     #endif
 }
@@ -145,6 +148,15 @@ final class TimerModel: ObservableObject {
         return String(format: "%02d", Int(ceil(Double(seconds) / 60)))
     }
     var lastMinutes: Int { max(1, Int(ceil(Double(isBreak ? workSeconds : countdown.configuredSeconds) / 60))) }
+    /// Real time until the remaining seconds next tick over, plus a little so
+    /// the rounded-up value has already changed. Idle states check twice a second.
+    func secondsToNextBoundary() -> TimeInterval {
+        guard countdown.phase == .running, let deadline = countdown.deadline else { return 0.5 }
+        let remaining = deadline.timeIntervalSince(AppClock.now())
+        let fraction = remaining - floor(remaining)
+        return min(0.5, (fraction + 0.01) / AppClock.rate)
+    }
+
     /// How full the coffee cup is during a break.
     func cupLevel(levels: Int) -> Int { countdown.bars(at: now, slats: levels) }
     private var sound: EndSound { hasPlus ? endSound : .chime }

@@ -98,6 +98,7 @@ struct TimerView: View {
         .persistentSystemOverlays(chromeHidden ? .hidden : .automatic)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: chromeHidden)
         .onReceive(ticker) { _ in if scenePhase == .active { model.tick() } }
+        .task { await tickOnSecondBoundaries() }
         .onReceive(store.$hasPlus) { model.hasPlus = $0 }
         .onOpenURL { url in
             guard url.scheme == ThirtyLink.scheme, url.host == "start" else { return }
@@ -189,7 +190,7 @@ struct TimerView: View {
     @ViewBuilder
     private func meter(stacked: Bool) -> some View {
         if model.isBreak {
-            CoffeeCup(level: model.cupLevel(levels: CoffeeCup.levels))
+            CoffeeCup(level: model.cupLevel(levels: CoffeeCup.levels), seconds: model.seconds)
                 .padding(stacked ? 24 : 12)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -364,6 +365,16 @@ struct TimerView: View {
         case .ready, .finished: model.start()
         case .running: model.pause()
         case .paused: model.resume(); showHint = true
+        }
+    }
+
+    /// The half-second ticker lands anywhere within a second, so the digits
+    /// changed up to half a second late, by a different amount each time.
+    /// While running, also tick just after each whole second of the deadline.
+    private func tickOnSecondBoundaries() async {
+        while !Task.isCancelled {
+            if scenePhase == .active && model.countdown.phase == .running { model.tick() }
+            try? await Task.sleep(nanoseconds: UInt64(model.secondsToNextBoundary() * 1_000_000_000))
         }
     }
 

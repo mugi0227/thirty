@@ -37,6 +37,8 @@ struct CoffeeCup: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Coffee left, 0...levels.
     let level: Int
+    /// Remaining seconds, so the steam sways on the same beat as the digits.
+    let seconds: Int
     static let levels = 9
 
     // '#' is the cup, 'c' the coffee inside.
@@ -58,11 +60,8 @@ struct CoffeeCup: View {
     private static let steamRows = 4
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.8)) { context in
-            let frame = reduceMotion ? 0 : Int(context.date.timeIntervalSinceReferenceDate / 0.8) % 2
-            PixelGrid(cells: Self.cells(level: level, frame: frame))
-        }
-        .accessibilityHidden(true)
+        PixelGrid(cells: Self.cells(level: level, frame: reduceMotion ? 0 : seconds % 2))
+            .accessibilityHidden(true)
     }
 
     static func cells(level: Int, frame: Int) -> [[Bool]] {
