@@ -149,7 +149,9 @@ if target_build:
             report['target_build_beta_detail'] = beta_detail['attributes'] if beta_detail else None
             # builds/betaGroups supports writes only. Read membership through
             # the documented betaGroups collection with a builds filter.
-            groups = get('/v1/betaGroups', **{'filter[app]': app_id, 'filter[builds]': target['id'],
+            # Apple accepts only one relationship filter per collection query.
+            # The target was already selected from this app's build list.
+            groups = get('/v1/betaGroups', **{'filter[builds]': target['id'],
                 'fields[betaGroups]': 'name,isInternalGroup,hasAccessToAllBuilds,createdDate', 'limit': 200}).get('data', [])
             report['target_build_beta_groups'] = [{k: group['attributes'].get(k) for k in
                 ('name', 'isInternalGroup', 'hasAccessToAllBuilds', 'createdDate')} for group in groups]

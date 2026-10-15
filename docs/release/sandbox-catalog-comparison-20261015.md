@@ -78,7 +78,10 @@ App Store Connect内の管理名は重複できないため `Thirty+ Current`。
 [PR #18](https://github.com/mugi0227/thirty/pull/18)は最新mainから作成し、新規購入先を取得できる商品へ切り替える。
 旧IDの検証済み・未取消の購入も復元し、一方の払い戻しで他方の有効な利用権を失わないよう集計する。
 [購入・復元判定とビルド](https://github.com/mugi0227/thirty/actions/runs/38719426877)では、18件のテストとReleaseのアプリ・ウィジェットのコンパイルが成功した。
-TestFlightビルド12は [アップロード処理](https://github.com/mugi0227/thirty/actions/runs/38719707110)で用意する。
+TestFlight 1.0.0 (12)は [アップロード処理](https://github.com/mugi0227/thirty/actions/runs/38719707110)が成功した。
+ソースは `f393a6b`。アプリとウィジェットのビルド番号12、配布用署名とEntitlementsを検査した。
+[GETによる確認](https://github.com/mugi0227/thirty/actions/runs/38720567251)で、ビルドは `VALID`、内部TestFlightは `IN_BETA_TESTING` となった。
+本番の審査準備は引き続き旧ビルド11のままで、App Reviewへの提出やPR #18のマージは行っていない。
 アプリ内の購入完了・復元は実機での確認待ちである。
 
 ## 実機比較の手順
