@@ -170,6 +170,12 @@ final class ScreenshotTests: XCTestCase {
         touchBars(app)
         sleep(1)
         shot("22-break")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
+        touchBars(app)
+        sleep(1)
+        shot("23-break-landscape")
+        XCUIDevice.shared.orientation = .portrait
     }
 
     func testLiveActivity() {
