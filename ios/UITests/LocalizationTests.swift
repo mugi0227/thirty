@@ -69,7 +69,7 @@ final class LocalizationTests: XCTestCase {
         app.swipeUp()
         app.swipeUp()
         XCTAssertTrue(app.buttons[english ? "Restore purchases" : "購入を復元"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts[english ? "One-time purchase. No subscription." : "買い切りです。定期購入ではありません。"].exists)
+        XCTAssertTrue(app.staticTexts[english ? "One-time purchase." : "買い切り商品です。"].exists)
         shot(language + "-09-plus-purchase")
         app.buttons["close-plus"].tap()
         app.swipeUp()

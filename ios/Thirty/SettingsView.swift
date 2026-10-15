@@ -170,7 +170,7 @@ struct PlusView: View {
                 VStack(spacing: 24) {
                     VStack(spacing: 8) {
                         Text("Thirty+").font(.largeTitle.weight(.bold))
-                        Text(String(localized: "タイマーは無料のまま、広告もありません。\n気に入ったら、買い切りでどうぞ。"))
+                        Text(String(localized: "時間・休憩・くり返しを保存。\nアプリを閉じても、残り時間を確認できます。"))
                             .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
                     .padding(.top, 8)
@@ -244,7 +244,7 @@ struct PlusBuyButtons: View {
             }
             .buttonStyle(SoftPressStyle())
             .disabled(store.isBusy || store.isLoadingProducts)
-            Text(String(localized: "買い切りです。定期購入ではありません。")).font(.caption).foregroundStyle(.secondary)
+            Text(String(localized: "買い切り商品です。")).font(.caption).foregroundStyle(.secondary)
             Button(String(localized: "購入を復元")) { Task { await store.restore() } }
                 .font(.footnote).frame(minHeight: 44).disabled(store.isBusy)
             if let message = store.message ?? store.productLoadFailure {
