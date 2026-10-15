@@ -641,7 +641,7 @@ struct TimePickerView: View {
             .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
             .sheet(isPresented: $showPlus) { PlusView(store: store) }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.height(520), .large])
     }
 
     /// Thirty+: time, break and repeat saved together. Long press to delete.
@@ -682,6 +682,7 @@ struct TimePickerView: View {
                 }
                 .padding(.horizontal, 20)
             }
+            .frame(height: 44)
         }
     }
 

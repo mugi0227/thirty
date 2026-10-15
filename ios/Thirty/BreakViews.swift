@@ -214,6 +214,7 @@ struct BreakPicker: View {
                     }
                     .padding(.horizontal, 20)
                 }
+                .frame(height: 44)
                 .padding(.top, 12)
                 Picker(String(localized: "休憩"), selection: $minutes) {
                     Text(String(localized: "休憩なし")).tag(0)
