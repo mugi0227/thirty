@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import OSLog
 
 /// Thirty+: mirrors the timer on the Lock Screen, in StandBy and the Dynamic
 /// Island. The system counts down to the deadline, so updates happen only on
@@ -8,6 +9,9 @@ import Foundation
 final class LiveActivityController {
     private var current: Activity<TimerActivityAttributes>?
     private var updateTask: Task<Void, Never>?
+    #if DEBUG
+    private let logger = Logger(subsystem: "jp.mugilab.thirty.activity", category: "LiveActivity")
+    #endif
 
     init() {
         // A previous process may have left one behind.
@@ -16,7 +20,11 @@ final class LiveActivityController {
 
     func sync(countdown: Countdown, at now: Date, enabled: Bool, skinID: String, slats: Int, isBreak: Bool) {
         let timing = countdown.phase == .running || countdown.phase == .paused
-        guard enabled, timing, ActivityAuthorizationInfo().areActivitiesEnabled else {
+        let authorized = ActivityAuthorizationInfo().areActivitiesEnabled
+        guard enabled, timing, authorized else {
+            #if DEBUG
+            logger.info("Activity skipped: enabled=\(enabled), timing=\(timing), authorized=\(authorized)")
+            #endif
             end()
             return
         }
@@ -37,10 +45,22 @@ final class LiveActivityController {
                 await previous?.value
                 guard !Task.isCancelled else { return }
                 await current.update(content)
+                #if DEBUG
+                self.logger.info("Activity updated: \(skinID, privacy: .public)")
+                #endif
             }
         } else {
             end()
-            current = try? Activity.request(attributes: TimerActivityAttributes(skinID: skinID, slats: slats), content: content)
+            do {
+                current = try Activity.request(attributes: TimerActivityAttributes(skinID: skinID, slats: slats), content: content)
+                #if DEBUG
+                logger.info("Activity requested: \(skinID, privacy: .public)")
+                #endif
+            } catch {
+                #if DEBUG
+                logger.error("Activity request failed: \(String(describing: error), privacy: .public)")
+                #endif
+            }
         }
     }
 

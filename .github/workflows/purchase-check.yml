@@ -42,7 +42,7 @@ jobs:
           set -eo pipefail
           mkdir -p ../sound-screenshots
           for device in 'iPhone 17' 'iPad Pro 13-inch (M5)'; do
-            udid=$(python3 ../scripts/ci/boot_localization_sim.py "$device" | tail -1)
+            udid=$(../scripts/ci/boot_sim.sh "$device" | tail -1)
             slug=$(echo "$device" | tr -cs '[:alnum:]' '-')
             mkdir -p "../sound-screenshots/$slug"
             TEST_RUNNER_SCREENSHOT_DIR="$PWD/../sound-screenshots/$slug" \
@@ -56,6 +56,9 @@ jobs:
               CODE_SIGNING_ALLOWED=NO test-without-building \
               > "../sound-$slug.log" 2>&1
             grep -E 'Test Case.*(passed|failed)|error:|TEST (SUCCEEDED|FAILED)' "../sound-$slug.log"
+            xcrun simctl spawn "$udid" log show --last 20m --style compact \
+              --predicate 'subsystem == "jp.mugilab.thirty.activity"' \
+              > "../sound-activity-$slug.log" 2>&1
             if [ "$device" = 'iPhone 17' ]; then
               swift ../scripts/ci/check_island_screenshots.swift "../sound-screenshots/$slug"
             fi
