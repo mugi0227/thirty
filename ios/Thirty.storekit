@@ -1,35 +1,51 @@
 {
-  "identifier" : "4F6A2C1E",
-  "nonRenewingSubscriptions" : [
-
-  ],
-  "products" : [
+  "identifier": "4F6A2C1E",
+  "nonRenewingSubscriptions": [],
+  "products": [
     {
-      "displayPrice" : "500",
-      "familyShareable" : true,
-      "internalID" : "7C3B9D21",
-      "localizations" : [
+      "displayPrice": "500",
+      "familyShareable": false,
+      "internalID": "52D9E6A4",
+      "localizations": [
         {
-          "description" : "すべてのスキンが使えます。買い切りです。",
-          "displayName" : "Thirty+",
-          "locale" : "ja"
+          "description": "すべてのスキンが使えます。買い切りです。",
+          "displayName": "Thirty+",
+          "locale": "ja"
+        },
+        {
+          "description": "Skins, Live Activities and sounds. One-time.",
+          "displayName": "Thirty+",
+          "locale": "en_US"
         }
       ],
-      "productID" : "jp.mugilab.thirty.plus",
-      "referenceName" : "Thirty+",
-      "type" : "NonConsumable"
+      "productID": "jp.mugilab.thirty.diagnostic",
+      "referenceName": "Thirty+",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "500",
+      "familyShareable": false,
+      "internalID": "7C3B9D21",
+      "localizations": [
+        {
+          "description": "すべてのスキンが使えます。買い切りです。",
+          "displayName": "Thirty+",
+          "locale": "ja"
+        }
+      ],
+      "productID": "jp.mugilab.thirty.plus",
+      "referenceName": "Thirty+ (legacy restoration)",
+      "type": "NonConsumable"
     }
   ],
-  "settings" : {
-    "_failTransactionsEnabled" : false,
-    "_locale" : "ja",
-    "_storefront" : "JPN"
+  "settings": {
+    "_failTransactionsEnabled": false,
+    "_locale": "ja",
+    "_storefront": "JPN"
   },
-  "subscriptionGroups" : [
-
-  ],
-  "version" : {
-    "major" : 3,
-    "minor" : 0
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
   }
 }
