@@ -161,19 +161,16 @@ struct BreakButton: View {
     let onLocked: () -> Void
     let onChange: (Int) -> Void
     @State private var showPicker = false
-    static let choices = [0, 5, 10, 15, 20, 30]
-
     var body: some View {
-        // A tap steps through the usual lengths; a long press picks any minute.
-        label
-            .contentShape(Circle())
-            .onTapGesture { if locked { onLocked() } else { onChange(Self.choices.first { $0 > minutes } ?? 0) } }
-            .onLongPressGesture(minimumDuration: 0.4) { if locked { onLocked() } else { showPicker = true } }
+        Button {
+            if locked { onLocked() } else { showPicker = true }
+        } label: { label }
+            .buttonStyle(SoftPressStyle())
             .accessibilityElement(children: .ignore)
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(String(localized: "休憩"))
             .accessibilityValue(minutes == 0 || locked ? String(localized: "休憩なし") : String(localized: "\(minutes)分"))
-            .accessibilityHint(locked ? "" : String(localized: "長押しで1分単位に選べます"))
+            .accessibilityHint(locked ? "" : String(localized: "休憩の長さを選ぶ"))
             .accessibilityAction(named: String(localized: "休憩の長さを選ぶ")) { if locked { onLocked() } else { showPicker = true } }
             .accessibilityIdentifier("break-button")
             .sheet(isPresented: $showPicker) {
@@ -198,15 +195,34 @@ struct BreakPicker: View {
     @State var minutes: Int
     let onChange: (Int) -> Void
     @Environment(\.dismiss) private var dismiss
+    private let choices = [0, 5, 10, 15, 20, 30]
 
     var body: some View {
         NavigationStack {
-            Picker(String(localized: "休憩"), selection: $minutes) {
-                Text(String(localized: "休憩なし")).tag(0)
-                ForEach(1...60, id: \.self) { Text(String(localized: "\($0)分")).tag($0) }
+            VStack(spacing: 8) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(choices, id: \.self) { choice in
+                            Button { minutes = choice } label: {
+                                Text(choice == 0 ? String(localized: "休憩なし") : String(localized: "\(choice)分"))
+                                    .font(.subheadline.weight(.semibold))
+                                    .padding(.horizontal, 14).frame(minHeight: 44)
+                                    .background(minutes == choice ? Color.accentColor.opacity(0.15) : Color(uiColor: .secondarySystemGroupedBackground), in: Capsule())
+                            }
+                            .buttonStyle(SoftPressStyle())
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+                .padding(.top, 12)
+                Picker(String(localized: "休憩"), selection: $minutes) {
+                    Text(String(localized: "休憩なし")).tag(0)
+                    ForEach(1...60, id: \.self) { Text(String(localized: "\($0)分")).tag($0) }
+                }
+                .pickerStyle(.wheel)
+                .accessibilityIdentifier("break-duration-picker")
+                .padding(.horizontal, 24)
             }
-            .pickerStyle(.wheel)
-            .padding(.horizontal, 24)
             .navigationTitle(String(localized: "休憩")).navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -215,10 +231,11 @@ struct BreakPicker: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button { onChange(minutes); dismiss() } label: { Image(systemName: "checkmark") }
                         .accessibilityLabel(String(localized: "決定"))
+                        .accessibilityIdentifier("confirm-break-duration")
                 }
             }
         }
-        .presentationDetents([.height(320)])
+        .presentationDetents([.height(390)])
     }
 }
 

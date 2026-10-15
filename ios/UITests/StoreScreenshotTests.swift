@@ -116,6 +116,11 @@ final class StoreScreenshotTests: XCTestCase {
                           "-ThirtyDemoSeconds", "1500", "-ThirtyJumpAfterStart", "1500",
                           "-breakLength", "5", "-repeatEnabled", "YES"])
         XCTAssertTrue(app.buttons["時間を変更"].waitForExistence(timeout: 15))
+        app.buttons["break-button"].tap()
+        XCTAssertTrue(app.pickerWheels.firstMatch.waitForExistence(timeout: 10))
+        app.pickerWheels.firstMatch.adjust(toPickerWheelValue: "7分")
+        app.buttons["confirm-break-duration"].tap()
+        XCTAssertEqual(app.buttons["break-button"].value as? String, "7分")
         app.buttons["時間を変更"].tap()
         XCTAssertTrue(app.buttons["save-set"].waitForExistence(timeout: 10))
         app.buttons["save-set"].tap()
