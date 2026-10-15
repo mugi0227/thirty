@@ -147,9 +147,14 @@ if target_build:
         if target and target['attributes'].get('processingState') in ('VALID', 'FAILED', 'INVALID'):
             beta_detail = get(f"/v1/builds/{target['id']}/buildBetaDetail").get('data')
             report['target_build_beta_detail'] = beta_detail['attributes'] if beta_detail else None
-            groups = get(f"/v1/builds/{target['id']}/betaGroups").get('data', [])
+            # builds/betaGroups supports writes only. Read membership through
+            # the documented betaGroups collection with a builds filter.
+            groups = get('/v1/betaGroups', **{'filter[app]': app_id, 'filter[builds]': target['id'],
+                'fields[betaGroups]': 'name,isInternalGroup,hasAccessToAllBuilds,createdDate', 'limit': 200}).get('data', [])
             report['target_build_beta_groups'] = [{k: group['attributes'].get(k) for k in
                 ('name', 'isInternalGroup', 'hasAccessToAllBuilds', 'createdDate')} for group in groups]
+            print(json.dumps({'target_build_beta_detail': report['target_build_beta_detail'],
+                              'target_build_beta_groups': report['target_build_beta_groups']}, ensure_ascii=False), flush=True)
             break
         if time.monotonic() >= deadline:
             break
