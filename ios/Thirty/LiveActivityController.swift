@@ -7,6 +7,7 @@ import Foundation
 @MainActor
 final class LiveActivityController {
     private var current: Activity<TimerActivityAttributes>?
+    private var updateTask: Task<Void, Never>?
 
     init() {
         // A previous process may have left one behind.
@@ -24,11 +25,19 @@ final class LiveActivityController {
             deadline: countdown.phase == .running ? countdown.deadline?.addingTimeInterval(-AppClock.lead) : nil,
             remaining: countdown.remaining(at: now),
             total: TimeInterval(countdown.configuredSeconds),
-            isBreak: isBreak)
+            isBreak: isBreak, skinID: skinID, slats: slats)
         let staleDate = countdown.phase == .running ? countdown.deadline?.addingTimeInterval(60) : nil
         let content = ActivityContent(state: state, staleDate: staleDate)
-        if let current, current.attributes.skinID == skinID, current.attributes.slats == slats {
-            Task { await current.update(content) }
+        if let current {
+            // Keep one activity when its appearance changes. Serialize updates
+            // so a rapid sequence of skin choices ends with the latest choice.
+            let previous = updateTask
+            previous?.cancel()
+            updateTask = Task {
+                await previous?.value
+                guard !Task.isCancelled else { return }
+                await current.update(content)
+            }
         } else {
             end()
             current = try? Activity.request(attributes: TimerActivityAttributes(skinID: skinID, slats: slats), content: content)
@@ -36,6 +45,8 @@ final class LiveActivityController {
     }
 
     func end() {
+        updateTask?.cancel()
+        updateTask = nil
         let ending = Activity<TimerActivityAttributes>.activities
         current = nil
         for activity in ending {

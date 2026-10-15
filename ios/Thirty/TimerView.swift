@@ -115,6 +115,7 @@ struct TimerView: View {
             showHint = model.countdown.phase == .running
         }
         .onChange(of: scenePhase) { _, phase in model.sceneChanged(phase) }
+        .onChange(of: skinID) { _, _ in model.refreshActivityAppearance() }
         .onChange(of: model.countdown.phase) { oldPhase, phase in
             lastTouch = Date()
             if phase == .finished { completedCount += 1 }

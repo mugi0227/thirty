@@ -52,9 +52,13 @@ jobs:
               -test-timeouts-enabled YES \
               -maximum-test-execution-time-allowance 180 \
               -only-testing:ThirtyUITests/SoundPreviewTests \
+              -only-testing:ThirtyUITests/LiveActivityAppearanceTests \
               CODE_SIGNING_ALLOWED=NO test-without-building \
               > "../sound-$slug.log" 2>&1
             grep -E 'Test Case.*(passed|failed)|error:|TEST (SUCCEEDED|FAILED)' "../sound-$slug.log"
+            if [ "$device" = 'iPhone 17' ]; then
+              swift ../scripts/ci/check_island_screenshots.swift "../sound-screenshots/$slug"
+            fi
             xcrun simctl shutdown "$udid"
           done
       - uses: actions/upload-artifact@v5

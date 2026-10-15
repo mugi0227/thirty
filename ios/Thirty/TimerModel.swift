@@ -282,6 +282,10 @@ final class TimerModel: ObservableObject {
                       skinID: defaults.string(forKey: "skin") ?? "classic", slats: effectiveSlats, isBreak: isBreak)
     }
 
+    func refreshActivityAppearance() {
+        syncActivity()
+    }
+
     private func persist() {
         if let data = try? JSONEncoder().encode(countdown) {
             defaults.set(data, forKey: storageKey)

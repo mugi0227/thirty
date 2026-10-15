@@ -10,6 +10,9 @@ struct TimerActivityAttributes: ActivityAttributes {
         var remaining: TimeInterval
         var total: TimeInterval
         var isBreak: Bool
+        /// Optional so an activity started by an older build still decodes.
+        var skinID: String? = nil
+        var slats: Int? = nil
     }
     var skinID: String
     var slats: Int
@@ -17,6 +20,15 @@ struct TimerActivityAttributes: ActivityAttributes {
 
 /// The few colours the extension needs, keyed by skin id.
 enum LCDPalette {
+    /// The Island always has a black background, including for light LCD skins.
+    static func islandInk(for skinID: String) -> Color {
+        switch skinID {
+        case "classic", "paper", "mint": return colors(for: skinID).lcd
+        case "amber", "night", "ruby": return colors(for: skinID).ink
+        default: return colors(for: "classic").lcd
+        }
+    }
+
     static func colors(for skinID: String) -> (lcd: Color, ink: Color) {
         switch skinID {
         case "paper": return (rgb(0xECEBE6), rgb(0x222220))

@@ -20,7 +20,7 @@ struct EndSoundPicker: View {
                             else { showPlus = true }
                         } label: {
                             HStack(spacing: 10) {
-                                Text(sound.title).foregroundStyle(.primary)
+                                Text(sound.title).foregroundStyle(Color.primary)
                                 if !sound.isFree && !store.hasPlus {
                                     Image(systemName: "lock.fill").font(.caption).foregroundStyle(.secondary)
                                 }

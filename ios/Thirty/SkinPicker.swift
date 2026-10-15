@@ -51,6 +51,7 @@ struct SkinPicker: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel(String(localized: "閉じる"))
+                        .accessibilityIdentifier("close-skins")
                 }
             }
         }
@@ -83,6 +84,7 @@ struct SkinPicker: View {
         }
         .buttonStyle(SoftPressStyle())
         .accessibilityLabel(skin.name)
+        .accessibilityIdentifier("skin-choice-" + skin.id)
         .accessibilityValue(selectedID == skin.id ? String(localized: "使用中") : locked ? String(localized: "Thirty+ で使えます") : "")
     }
 

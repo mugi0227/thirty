@@ -81,7 +81,8 @@ final class SoundPreviewTests: XCTestCase {
 
         let vibration = app.buttons["end-sound-preview-vibrate"]
         vibration.tap()
-        expect(vibration, label: "Stop preview")
+        // XCTest waits for the short three-tap sequence to finish before tap()
+        // returns, so only the settled state is observable here.
         expect(vibration, label: "Try vibration")
         XCTAssertTrue(app.buttons["end-sound-select-bell"].isSelected)
         app.navigationBars.buttons.element(boundBy: 0).tap()

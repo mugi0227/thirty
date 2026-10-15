@@ -101,11 +101,12 @@ struct StartControl: ControlWidget {
 struct TimerLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TimerActivityAttributes.self) { context in
+            let skinID = context.state.skinID ?? context.attributes.skinID
             LockScreenTimer(context: context)
-                .activityBackgroundTint(LCDPalette.colors(for: context.attributes.skinID).lcd)
-                .activitySystemActionForegroundColor(LCDPalette.colors(for: context.attributes.skinID).ink)
+                .activityBackgroundTint(LCDPalette.colors(for: skinID).lcd)
+                .activitySystemActionForegroundColor(LCDPalette.colors(for: skinID).ink)
         } dynamicIsland: { context in
-            let ink = LCDPalette.colors(for: context.attributes.skinID).ink
+            let ink = LCDPalette.islandInk(for: context.state.skinID ?? context.attributes.skinID)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 14) {
@@ -135,9 +136,10 @@ struct LockScreenTimer: View {
     let context: ActivityViewContext<TimerActivityAttributes>
 
     var body: some View {
-        let colors = LCDPalette.colors(for: context.attributes.skinID)
+        let colors = LCDPalette.colors(for: context.state.skinID ?? context.attributes.skinID)
         HStack(spacing: 14) {
-            ActivitySlats(state: context.state, ink: colors.ink)
+            ActivitySlats(state: context.state, ink: colors.ink,
+                          count: context.state.slats ?? context.attributes.slats)
             Rectangle().fill(colors.ink.opacity(0.16)).frame(width: 1.5)
             VStack(alignment: .trailing, spacing: 2) {
                 if context.state.isBreak {
