@@ -10,6 +10,7 @@ from create_diagnostic_iap import relationship, list_all, source_snapshot, price
 PRODUCT_ID = "6823121323"
 LEGACY_ID = "6822135374"
 PRODUCT_SKU = "jp.mugilab.thirty.diagnostic"
+REFERENCE_NAME = "Thirty+ Current"
 TEXT = [
     {"locale": "ja", "name": "Thirty+", "description": "スキン、ロック画面表示、終了音などが使えます。買い切りです。"},
     {"locale": "en-US", "name": "Thirty+", "description": "Skins, Live Activities and sounds. One-time."},
@@ -47,7 +48,7 @@ def main():
     legacy_prices = prices(client, legacy["price_schedule_id"])
     if (before["attributes"]["productId"] != PRODUCT_SKU
             or before["attributes"]["inAppPurchaseType"] != "NON_CONSUMABLE"
-            or before["attributes"]["name"] not in ("Thirty Sandbox Diagnostic", "Thirty+")
+            or before["attributes"]["name"] not in ("Thirty Sandbox Diagnostic", REFERENCE_NAME)
             or set(old_prices) != {"JPN", "USA"}
             or float(old_prices["JPN"]) != 500 or float(old_prices["USA"]) != 2.99):
         raise RuntimeError("Product identity or prices changed")
@@ -59,7 +60,7 @@ def main():
     locales = list_all(client, f"/v1/inAppPurchaseVersions/{version['id']}/localizations", limit=200)
     operations = []
     parent_body = {"data": {"type": "inAppPurchases", "id": PRODUCT_ID,
-        "attributes": {"name": "Thirty+", "reviewNote": NOTE}}}
+        "attributes": {"name": REFERENCE_NAME, "reviewNote": NOTE}}}
     operations.append(("PATCH", f"/v2/inAppPurchases/{PRODUCT_ID}", parent_body))
     for text in TEXT:
         existing = next((x for x in locales if x["attributes"]["locale"] == text["locale"]), None)
@@ -92,7 +93,7 @@ def main():
     if (any(before[k] != after[k] for k in stable_keys)
             or prices(client, after["price_schedule_id"]) != old_prices
             or actual_text != sorted(TEXT, key=lambda x: x["locale"])
-            or after["attributes"]["name"] != "Thirty+"
+            or after["attributes"]["name"] != REFERENCE_NAME
             or after["attributes"]["reviewNote"] != NOTE
             or source_snapshot(client, LEGACY_ID) != legacy
             or prices(client, legacy["price_schedule_id"]) != legacy_prices):
