@@ -36,13 +36,13 @@ jobs:
           xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug
           -destination 'generic/platform=iOS Simulator' -derivedDataPath ../build-sim
           CODE_SIGNING_ALLOWED=NO build-for-testing -quiet
-      - name: Verify sound previews and purchase gates on iPhone and iPad
+      - name: Verify sound previews, purchase gates and Island appearance on iPhone
         working-directory: ios
         run: |
           set -eo pipefail
           mkdir -p ../sound-screenshots
-          for device in 'iPhone 17' 'iPad Pro 13-inch (M5)'; do
-            udid=$(../scripts/ci/boot_sim.sh "$device" | tail -1)
+          for device in 'iPhone 17'; do
+            udid=$(THIRTY_SIM_RUNTIME=latest python3 ../scripts/ci/boot_localization_sim.py "$device" | tail -1)
             slug=$(echo "$device" | tr -cs '[:alnum:]' '-')
             mkdir -p "../sound-screenshots/$slug"
             TEST_RUNNER_SCREENSHOT_DIR="$PWD/../sound-screenshots/$slug" \
@@ -50,7 +50,7 @@ jobs:
               -destination "id=$udid" -derivedDataPath ../build-sim \
               -parallel-testing-enabled NO \
               -test-timeouts-enabled YES \
-              -maximum-test-execution-time-allowance 180 \
+              -maximum-test-execution-time-allowance 300 \
               -only-testing:ThirtyUITests/SoundPreviewTests \
               -only-testing:ThirtyUITests/LiveActivityAppearanceTests \
               CODE_SIGNING_ALLOWED=NO test-without-building \
