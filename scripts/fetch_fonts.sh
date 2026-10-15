@@ -1,10 +1,8 @@
 #!/bin/bash
-# Fetch the OFL Japanese fonts used by make_store_screenshots.py.
+# Prepare the bundled OFL Japanese fonts used by the release media scripts.
 set -euo pipefail
-DIR="$(cd "$(dirname "$0")" && pwd)/fonts"
-mkdir -p "$DIR"
-for file in zenkakugothicnew/ZenKakuGothicNew-Bold.ttf zenkakugothicnew/ZenKakuGothicNew-Medium.ttf \
-            zenoldmincho/ZenOldMincho-Bold.ttf zenoldmincho/ZenOldMincho-Regular.ttf; do
-  [ -f "$DIR/$(basename "$file")" ] || curl -sSfL -o "$DIR/$(basename "$file")" "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/$file"
-done
-ls "$DIR"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+python3 "$ROOT/scripts/verify_store_fonts.py"
+# Keep the old local directory available for existing preview commands.
+mkdir -p "$ROOT/scripts/fonts"
+cp "$ROOT"/assets/store-fonts/*.ttf "$ROOT/scripts/fonts/"

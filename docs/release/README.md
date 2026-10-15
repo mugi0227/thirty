@@ -15,7 +15,7 @@
 | App Reviewへのメモ、App内課金の情報 | [review-notes.md](review-notes.md) | 下書き済み |
 | プライバシーマニフェスト | `ios/Thirty/PrivacyInfo.xcprivacy`、`ios/Widgets/PrivacyInfo.xcprivacy` | 追加済み（追跡なし、収集なし、UserDefaultsの理由 CA92.1） |
 | 暗号化の申告 | `ITSAppUsesNonExemptEncryption = NO` | 設定済み |
-| バージョン | 1.0.0（ビルド1） | 設定済み |
+| バージョン | 1.0.0（ビルド番号はリリースCIで自動採番） | 設定済み |
 
 ## Appleの要件で確認したこと
 
@@ -72,7 +72,7 @@ CIの `iphone-duo` ジョブは、Duoに対応したランタイムが入って�
 
 - `ios/UITests/StoreScreenshotTests.swift` がSimulatorを操作して撮影します。時刻は9:41、Simulatorの言語は日本語、通知の許可は出さない設定です。
 - 計測中の画面は、開始直後に時計を進める（デバッグ版だけの `-ThirtyJumpAfterStart`）ことで、毎回同じくらいの残り時間で撮れます。
-- `scripts/make_store_screenshots.py` が見出しを付けます。書体は日本語の **Zen Kaku Gothic New**（`STORE_FONT=mincho` で **Zen Old Mincho**）。どちらもOFLで、`scripts/fetch_fonts.sh` が取得します。中国語用の書体に切り替わって字形が変わることはありません。
+- `scripts/make_store_screenshots.py` が見出しを付けます。書体は日本語の **Zen Kaku Gothic New**（`STORE_FONT=mincho` で **Zen Old Mincho**）。どちらもOFLで、ライセンスとともに `assets/store-fonts/` に同梱しています。`scripts/fetch_fonts.sh` はハッシュを確認して準備するだけなので、CDNの障害で撮影・編集が止まることはありません。中国語用の書体に切り替わって字形が変わることはありません。
 - 横向きの画面は、横長のストア画像（例：2622×1206）として出力します。
 - ロック画面は画面全体を撮影します。Dynamic Islandは設定アプリの上に出ている通常のコンパクト表示を別の画像にし、ホーム画面のアイコンが入らないようにしています。
 
@@ -81,3 +81,25 @@ CIの `iphone-duo` ジョブは、Duoに対応したランタイムが入って�
 [検証記録](preview-verification-20261013.md)に、使用したCIの録画と画像、動画の再生成手順、確認結果を記録しています。
 Dynamic Islandの場面では上端を固定して最大1.5倍まで拡大し、最後の0.5秒はその倍率を維持します。
 棒と残り時間を画面内に収めるため、拡大するのはこの場面だけです。
+
+## 最新の素材を掲載情報へ反映する
+
+1. `Build iOS` を最新ブランチで実行します。mainへのiOS・スクリプト変更でも実行されます。
+2. すべての撮影と編集が成功すると、画像・動画のサイズと形式を検証した `app-review-media` 成果物ができます。iPhoneは各9枚、iPadは8枚で、休憩カップとマイセットを含みます。`provenance.json` に元コミットと実行URLが入ります。
+3. 成果物をダウンロードして内容を確認します。
+4. `Fill App Store listing` の `media_run_id` に、その成功した `Build iOS` の実行IDを入力します。`media=true` で、新しく撮影した素材が使われます。空欄の場合は従来どおりリポジトリ内の素材を使います。
+5. `dry_run=true` で変更対象を確認し、その後 `dry_run=false` で掲載情報を保存します。`prepare_review` は価格・年齢制限・ビルド選択も更新するため、素材だけ更新する場合は `false` にします。
+
+このワークフローはApp Reviewへの提出を行いません。提出前に、最新のTestFlightビルドと実際に購入できるThirty+（`jp.mugilab.thirty.diagnostic`）が審査対象になっていることを確認します。
+
+### 「審査へ追加済み・未提出」から素材を更新する場合
+
+Appleの `READY_FOR_REVIEW` では画像・動画を編集できません（[App and submission statuses](https://developer.apple.com/help/app-store-connect/reference/app-and-submission-statuses/)）。
+`Fill App Store listing` の `draft_action=inspect` で未提出であることを確認し、`reopen` でこのアプリ版だけを下書きから外します。`dry_run=true` なら変更しません。実際に編集状態へ戻す場合は `dry_run=false` にします。
+
+その後 `draft_action=listing` と成功した `media_run_id` で素材を更新します。素材の元コミットと現在のアプリ製品コードが違う場合は、外部への変更前に停止します。
+`draft_action=finish` と確認済みの `target_build` を指定すると、画像と動画の処理完了を確認して、そのビルドとアプリが実際に使うThirty+を下書きへ追加します。旧商品の審査項目は、新しい商品の追加が成功してから外します。
+
+この操作は未提出の下書きだけを対象にします。送信済み・審査中の版には対応せず、App Reviewへの送信は行いません。
+
+掲載画像は、基本のタイマー・横向き・アクセスガイドに続いて、休憩とマイセットを案内する順序です。`release/metadata-ja.json` の `screenshot_order` で指定します。

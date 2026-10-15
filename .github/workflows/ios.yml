@@ -3,10 +3,13 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - 'claude/**'
+      - codex/release-media
     paths:
       - 'ios/**'
       - 'scripts/**'
+      - 'assets/store-fonts/**'
       - '.github/workflows/ios.yml'
 concurrency:
   group: ios-${{ github.ref }}
@@ -116,12 +119,13 @@ jobs:
         working-directory: ios
         run: |
           mkdir -p ../raw
+          status=0
           TEST_RUNNER_SCREENSHOT_DIR="$PWD/../raw" \
           xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
             -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath ../build-sim \
             -only-testing:ThirtyUITests/StoreScreenshotTests -skip-testing:ThirtyUITests/StoreScreenshotTests/testPreviewVideo \
-            CODE_SIGNING_ALLOWED=NO test > ../store-${{ matrix.slug }}.log 2>&1
-          status=$?
+            -parallel-testing-enabled NO -retry-tests-on-failure -test-iterations 2 \
+            CODE_SIGNING_ALLOWED=NO test > ../store-${{ matrix.slug }}.log 2>&1 || status=$?
           grep -E "Test Case.*(passed|failed)|error:" ../store-${{ matrix.slug }}.log | tail -40
           exit $status
       - name: Add captions
@@ -186,8 +190,7 @@ jobs:
         with:
           name: app-preview-video
           path: |
-            video/app-preview-iphone.mp4
-            video/test.log
+            video/
           retention-days: 30
 
   app-preview:
@@ -217,6 +220,47 @@ jobs:
         with:
           name: app-preview-final
           path: app-preview-iphone-6.9.mp4
+          retention-days: 30
+
+  review-media:
+    name: Collect verified App Review media
+    needs: [build, store-screenshots, app-preview]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: store-*
+          path: staging
+      - uses: actions/download-artifact@v5
+        with:
+          name: app-preview-final
+          path: staging/preview
+      - name: Assemble the listing's exact folder structure
+        run: |
+          mkdir -p review-media
+          for size in iphone-medium iphone-large ipad-13; do
+            cp -R "staging/store-$size/store/$size" "review-media/$size"
+          done
+          cp staging/preview/app-preview-iphone-6.9.mp4 review-media/
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path('review-media/provenance.json').write_text(json.dumps({
+              'commit': os.environ['GITHUB_SHA'],
+              'run': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          }, indent=2) + '\n')
+          PY
+      - name: Check dimensions, counts and video encoding
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python3 -m pip install --quiet pillow
+          python3 scripts/check_release_media.py review-media
+      - uses: actions/upload-artifact@v5
+        with:
+          name: app-review-media
+          path: review-media/
           retention-days: 30
 
   iphone-duo:

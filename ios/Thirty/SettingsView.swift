@@ -60,10 +60,6 @@ struct SettingsView: View {
                         }
                     }
                     .accessibilityIdentifier("end-sound-settings")
-                    plusToggle(String(localized: "休憩をはさんでくり返す"), isOn: $model.cycleEnabled)
-                    if plus && model.cycleEnabled {
-                        Stepper(String(localized: "休憩 \(model.breakMinutes)分"), value: $model.breakMinutes, in: 1...30)
-                    }
                     plusToggle(String(localized: "閉じても残り時間を表示"), isOn: $model.liveActivityEnabled)
                     plusPicker(String(localized: "棒の本数"), selection: $model.slatCount) {
                         Text(String(localized: "30本")).tag(30)
@@ -163,7 +159,7 @@ struct PlusView: View {
         ("paintpalette", String(localized: "スキン"), String(localized: "アンバー、ナイトブルー、ルビーなど5種類")),
         ("lock.iphone", String(localized: "閉じても、残りが見える"), String(localized: "ほかのアプリやロック画面でも、画面上部の黒い部分（Dynamic Island）やロック画面に、減っていく棒と残り時間が出ます。充電中に横置きすると置き時計にも（StandBy）")),
         ("bell", String(localized: "終了音"), String(localized: "キッチンタイマーのピピピ、ベル、やさしい音、振動のみ")),
-        ("arrow.triangle.2.circlepath", String(localized: "休憩をはさんでくり返す"), String(localized: "30分→休憩5分→30分…を自動で")),
+        ("repeat", String(localized: "くり返しと休憩"), String(localized: "25分→休憩5分→25分…を自動で。よく使う組み合わせはマイセットに保存")),
         ("app.badge", String(localized: "アプリのアイコン"), String(localized: "スキンに合わせた5種類")),
         ("slider.horizontal.3", String(localized: "表示の細かい設定"), String(localized: "棒を60本に、分だけの表示に")),
     ]

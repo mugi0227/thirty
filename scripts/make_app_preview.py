@@ -49,14 +49,31 @@ def read_frames(path, width, height):
 
 
 def find_events(frames):
-    """Start = the first big change (the tap); finish = the first jump after the drain."""
+    """Find the actual play-button press and the empty meter, not screen-wide cuts.
+
+    Adding the small repeat/break controls made the old whole-screen difference
+    threshold miss the press. Restrict each observation to the UI it measures.
+    """
     gray = frames[:, ::4, ::4].mean(axis=3)
-    diff = np.abs(np.diff(gray, axis=0)).mean(axis=(1, 2))
-    start = next(i for i in range(FPS, len(diff)) if diff[i] > 10) + 1
-    finish = next((i for i in range(start + 8 * FPS, len(diff)) if diff[i] > 4.5), None)
+    _, height, width = gray.shape
+    button = gray[:, int(height * .86):int(height * .95), int(width * .40):int(width * .60)]
+    baseline = np.median(button[:FPS], axis=0)
+    changed = np.abs(button - baseline).mean(axis=(1, 2))
+    presses = np.flatnonzero(changed[FPS:] > 8)
+    if not len(presses):
+        sys.exit("No Start button press found in the recording.")
+    start = int(presses[0]) + FPS
+    meter = gray[:, int(height * .14):int(height * .58), int(width * .08):int(width * .92)]
+    ink = (meter < 90).mean(axis=(1, 2))
+    if float(np.median(ink[:FPS])) < .1:
+        sys.exit("The recording does not begin with the full classic-skin meter.")
+    # Require an empty meter for 0.3 seconds, so a fill-up animation cannot
+    # masquerade as the finish screen.
+    held = max(1, round(FPS * .3))
+    finish = next((i for i in range(start + 8 * FPS, len(ink) - held)
+                   if np.all(ink[i:i + held] < .005)), None)
     if finish is None:
         sys.exit("The recording ends before the finish screen; record longer.")
-    finish += 1
     return start / FPS, finish / FPS
 
 
@@ -251,7 +268,8 @@ def main():
         for f in range(round(end_seconds * FPS)):
             encoder.stdin.write(end_card(f / FPS).convert("RGB").tobytes())
         encoder.stdin.close()
-        encoder.wait()
+        if encoder.wait() != 0:
+            raise SystemExit("Video encoding failed")
 
         samples = tone(total, events)
         with wave.open(str(audio), "wb") as w:

@@ -17,6 +17,8 @@ import argparse
 import hashlib
 import json
 import os
+import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -160,8 +162,10 @@ def upload(client, kind, set_type, set_id, path, extra):
 
 def replace_media(client, localization_id, config):
     sets = client.get(f"/v1/appStoreVersionLocalizations/{localization_id}/appScreenshotSets")["data"]
+    order = {name: index for index, name in enumerate(config.get("screenshot_order", []))}
     for display_type, folder in config["screenshots"].items():
         files = sorted((ROOT / folder).glob("*.png"))
+        files.sort(key=lambda path: (order.get(path.stem, len(order)), path.name))
         existing = next((s for s in sets if s["attributes"]["screenshotDisplayType"] == display_type), None)
         if existing:
             for shot in client.get(f"/v1/appScreenshotSets/{existing['id']}/appScreenshots")["data"]:
@@ -176,6 +180,7 @@ def replace_media(client, localization_id, config):
         client.patch(f"/v1/appScreenshotSets/{set_id}/relationships/appScreenshots",
                      {"data": [{"type": "appScreenshots", "id": i} for i in ids]})
         print(f"  {display_type}: {len(ids)} screenshots from {folder}")
+        print("    order:", ", ".join(path.stem for path in files))
 
     preview_sets = client.get(f"/v1/appStoreVersionLocalizations/{localization_id}/appPreviewSets")["data"]
     for preview_type, file in config.get("previews", {}).items():
@@ -191,6 +196,34 @@ def replace_media(client, localization_id, config):
                                      "type": "appStoreVersionLocalizations", "id": localization_id}}}}})["data"]["id"]
         upload(client, "appPreviews", "appPreviewSets", set_id, ROOT / file, {"mimeType": "video/mp4"})
         print(f"  {preview_type}: app preview {file}")
+
+
+def check_media_files(config):
+    # Check every local file before replacing any remote set. In particular,
+    # never empty a listing because the selected artifact was not downloaded.
+    for display_type, folder in config["screenshots"].items():
+        files = sorted((ROOT / folder).glob("*.png"))
+        if not 1 <= len(files) <= 10:
+            raise SystemExit(f"{display_type}: expected 1–10 screenshots in {folder}, got {len(files)}")
+        for path in files:
+            if path.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
+                raise SystemExit(f"Invalid screenshot: {path}")
+    for file in config.get("previews", {}).values():
+        if not (ROOT / file).is_file() or (ROOT / file).stat().st_size == 0:
+            raise SystemExit(f"Missing preview: {file}")
+    provenance = ROOT / "docs/release/store/provenance.json"
+    if not provenance.is_file():
+        raise SystemExit("Media provenance is missing. Select a successful Build iOS media_run_id.")
+    source = json.loads(provenance.read_text()).get("commit", "")
+    if not re.fullmatch(r"[0-9a-f]{40}", source):
+        raise SystemExit("Invalid media source commit")
+    if subprocess.run(["git", "cat-file", "-e", source + "^{commit}"], cwd=ROOT,
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
+        subprocess.run(["git", "fetch", "--depth=1", "origin", source], cwd=ROOT, check=True)
+    if subprocess.run(["git", "diff", "--quiet", source, "--", "ios/Thirty", "ios/Shared", "ios/Widgets", "ios/project.yml"],
+                      cwd=ROOT).returncode:
+        raise SystemExit("Media was captured from different app code. Generate media for the current app first.")
+    print(f"Media source matches the app code ({source})")
 
 
 AGE_RATING_NONE = ["alcoholTobaccoOrDrugUseOrReferences", "contests", "gamblingSimulated", "gunsOrOtherWeapons",
@@ -279,6 +312,8 @@ def main():
     parser.add_argument("--prepare-review", action="store_true")
     args = parser.parse_args()
     config = json.loads((ROOT / args.config).read_text(encoding="utf-8"))
+    if not args.skip_media:
+        check_media_files(config)
     client = Client(args.dry_run)
     apps = client.get("/v1/apps", **{"filter[bundleId]": config["bundle_id"]})["data"]
     if not apps:
