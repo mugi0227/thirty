@@ -1,3 +1,8 @@
+---
+title: プライバシーポリシー / Privacy Policy
+permalink: /privacy-policy/
+---
+
 # Thirty プライバシーポリシー
 
 最終更新日：2026年10月13日
@@ -25,7 +30,7 @@ Appleによる情報の取り扱いは、Appleのプライバシーポリシー�
 
 ## お問い合わせ
 
-[サポートページ](support.md)をご覧ください。
+[サポートページ](../support/)をご覧ください。
 
 ## 変更
 
@@ -57,7 +62,7 @@ Thirty+ purchases and restoration use Apple's App Store. The developer does not 
 
 ## Contact
 
-See the [support page](support.md).
+See the [support page](../support/).
 
 ## Changes
 

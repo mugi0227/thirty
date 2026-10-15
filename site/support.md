@@ -1,3 +1,8 @@
+---
+title: サポート / Support
+permalink: /support/
+---
+
 # Thirty サポート
 
 ## よくある質問
@@ -20,7 +25,7 @@
 ## お問い合わせ
 
 不具合やご要望は、GitHubのIssueでお知らせください。
-https://github.com/mugi0227/thirty/issues
+https://github.com/mugi0227/thirty-support/issues
 
 ---
 
@@ -45,4 +50,4 @@ Open and close the app once to restore the previous brightness. If necessary, ad
 
 ## Contact
 
-Report issues or requests on [GitHub](https://github.com/mugi0227/thirty/issues).
+Report issues or requests on [GitHub](https://github.com/mugi0227/thirty-support/issues).
