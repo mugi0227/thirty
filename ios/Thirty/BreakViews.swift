@@ -160,31 +160,25 @@ struct BreakButton: View {
     var size: CGFloat = 56
     let onLocked: () -> Void
     let onChange: (Int) -> Void
+    @State private var showPicker = false
     static let choices = [0, 5, 10, 15, 20, 30]
 
     var body: some View {
-        if locked {
-            Button(action: onLocked) { label }
-                .buttonStyle(SoftPressStyle())
-                .accessibilityLabel(String(localized: "休憩"))
-                .accessibilityIdentifier("break-button")
-        } else {
-            // A tap steps through the usual lengths; a long press lists them all.
-            Menu {
-                Picker(String(localized: "休憩"), selection: Binding(get: { minutes }, set: onChange)) {
-                    ForEach(Self.choices, id: \.self) { choice in
-                        Text(choice == 0 ? String(localized: "休憩なし") : String(localized: "休憩 \(choice)分")).tag(choice)
-                    }
-                }
-            } label: {
-                label
-            } primaryAction: {
-                onChange(Self.choices.first { $0 > minutes } ?? 0)
-            }
+        // A tap steps through the usual lengths; a long press picks any minute.
+        label
+            .contentShape(Circle())
+            .onTapGesture { if locked { onLocked() } else { onChange(Self.choices.first { $0 > minutes } ?? 0) } }
+            .onLongPressGesture(minimumDuration: 0.4) { if locked { onLocked() } else { showPicker = true } }
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
             .accessibilityLabel(String(localized: "休憩"))
-            .accessibilityValue(minutes == 0 ? String(localized: "休憩なし") : String(localized: "\(minutes)分"))
+            .accessibilityValue(minutes == 0 || locked ? String(localized: "休憩なし") : String(localized: "\(minutes)分"))
+            .accessibilityHint(locked ? "" : String(localized: "長押しで1分単位に選べます"))
+            .accessibilityAction(named: String(localized: "休憩の長さを選ぶ")) { if locked { onLocked() } else { showPicker = true } }
             .accessibilityIdentifier("break-button")
-        }
+            .sheet(isPresented: $showPicker) {
+                BreakPicker(minutes: minutes, onChange: onChange)
+            }
     }
 
     private var on: Bool { minutes > 0 && !locked }
@@ -196,6 +190,35 @@ struct BreakButton: View {
         }
         .opacity(on ? 1 : 0.4)
         .modeButton(isOn: on, locked: locked, size: size, skin: skin)
+    }
+}
+
+/// Any break from none to an hour, a minute at a time.
+struct BreakPicker: View {
+    @State var minutes: Int
+    let onChange: (Int) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Picker(String(localized: "休憩"), selection: $minutes) {
+                Text(String(localized: "休憩なし")).tag(0)
+                ForEach(1...60, id: \.self) { Text(String(localized: "\($0)分")).tag($0) }
+            }
+            .pickerStyle(.wheel)
+            .padding(.horizontal, 24)
+            .navigationTitle(String(localized: "休憩")).navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel(String(localized: "キャンセル"))
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button { onChange(minutes); dismiss() } label: { Image(systemName: "checkmark") }
+                        .accessibilityLabel(String(localized: "決定"))
+                }
+            }
+        }
+        .presentationDetents([.height(320)])
     }
 }
 

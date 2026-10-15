@@ -57,11 +57,11 @@ final class TimerModel: ObservableObject {
     }
     /// Like a music player's repeat: the session (and its break) starts over until stopped.
     @Published var repeatEnabled: Bool {
-        didSet { defaults.set(repeatEnabled, forKey: "repeatEnabled") }
+        didSet { defaults.set(repeatEnabled, forKey: "repeatEnabled"); syncNotification(requestPermission: false) }
     }
     /// The break that follows each focus session; 0 is none.
     @Published var breakMinutes: Int {
-        didSet { defaults.set(breakMinutes, forKey: "breakLength") }
+        didSet { defaults.set(breakMinutes, forKey: "breakLength"); syncNotification(requestPermission: false) }
     }
     @Published var savedSets: [TimerSet] {
         didSet { if let data = try? JSONEncoder().encode(savedSets) { defaults.set(data, forKey: "savedSets") } }
@@ -76,7 +76,19 @@ final class TimerModel: ObservableObject {
         didSet { defaults.set(liveActivityEnabled, forKey: "liveActivityEnabled"); syncActivity() }
     }
     @Published var hasPlus = false {
-        didSet { if oldValue != hasPlus { syncNotification(requestPermission: false); syncActivity() } }
+        didSet {
+            guard oldValue != hasPlus else { return }
+            // Thirty+ is only known after launch, by which time a round that ended
+            // while closed has already been marked finished.
+            if hasPlus && countdown.phase == .finished, let endedAt { advanceRounds(endedAt: endedAt) }
+            syncNotification(requestPermission: false)
+            syncActivity()
+        }
+    }
+    /// When the last round ran out, so the next one can follow on from then.
+    private var endedAt: Date? {
+        get { defaults.object(forKey: "endedAt") as? Date }
+        set { defaults.set(newValue, forKey: "endedAt") }
     }
     /// The break after a focus session.
     @Published private(set) var isBreak: Bool
@@ -127,7 +139,9 @@ final class TimerModel: ObservableObject {
         let demoSeconds = defaults.integer(forKey: "ThirtyDemoSeconds")
         if demoSeconds > 0 { countdown.setSeconds(demoSeconds, at: now) }
         #endif
+        let savedDeadline = countdown.deadline
         countdown.refresh(at: now)
+        if countdown.phase == .finished, let savedDeadline { endedAt = savedDeadline }
         persist()
         // Recover request IDs from a previous process so a reset can cancel them.
         Task { [weak self] in
@@ -165,37 +179,54 @@ final class TimerModel: ObservableObject {
     func tick(at date: Date = AppClock.now(), announceCompletion: Bool = true) {
         now = date
         let previous = countdown.phase
+        let deadline = countdown.deadline
         countdown.refresh(at: date)
-        if previous != countdown.phase {
-            persist()
-            updateDisplay()
-            syncActivity()
-            if isActive && announceCompletion {
-                effects.playAlarm(sound)
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                // Rounds chain only while the app is open; a session that ended in
-                // the background just shows as finished on return.
-                if countdown.phase == .finished && hasPlus { nextRound() }
-            }
+        guard previous != countdown.phase else { return }
+        persist()
+        updateDisplay()
+        syncActivity()
+        // Rounds follow on from the moment the last one ended, so a session that
+        // ended while the app was closed has carried on by the time it reopens.
+        if countdown.phase == .finished, let deadline {
+            endedAt = deadline
+            advanceRounds(endedAt: deadline)
+        }
+        if isActive && announceCompletion {
+            effects.playAlarm(sound)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
     }
 
-    /// Focus → break, and with repeat, round again until the stop button.
-    private func nextRound() {
-        if isBreak {
-            guard repeatEnabled else { return }
-            setBreak(false)
-            countdown.setSeconds(workSeconds, at: now)
-        } else if breakMinutes > 0 {
-            workSeconds = countdown.configuredSeconds
-            defaults.set(workSeconds, forKey: "workSeconds")
-            setBreak(true)
-            countdown.setSeconds(breakMinutes * 60, at: now)
-        } else {
-            guard repeatEnabled else { return }
+    /// What follows a finished focus session or break, if anything:
+    /// focus → break, and with repeat, round again until the stop button.
+    private func segment(afterBreak: Bool, work: Int) -> (seconds: Int, isBreak: Bool)? {
+        guard hasPlus else { return nil }
+        if afterBreak { return repeatEnabled ? (work, false) : nil }
+        if breakMinutes > 0 { return (breakMinutes * 60, true) }
+        return repeatEnabled ? (work, false) : nil
+    }
+
+    private func advanceRounds(endedAt end: Date) {
+        var end = end
+        var advanced = false
+        // Short rounds over a long absence could chain many times; stop somewhere sane.
+        for _ in 0..<2000 {
+            let work = isBreak ? workSeconds : countdown.configuredSeconds
+            guard let next = segment(afterBreak: isBreak, work: work) else { break }
+            if !isBreak {
+                workSeconds = work
+                defaults.set(workSeconds, forKey: "workSeconds")
+            }
+            setBreak(next.isBreak)
+            countdown.setSeconds(next.seconds, at: end)
+            countdown.start(at: end)
+            advanced = true
+            guard let deadline = countdown.deadline else { break }
+            countdown.refresh(at: now)
+            guard countdown.phase == .finished else { break }
+            end = deadline
         }
-        countdown.start(at: now)
-        changed(requestPermission: false)
+        if advanced { changed(requestPermission: false) }
     }
 
     private func setBreak(_ value: Bool) {
@@ -363,6 +394,13 @@ final class TimerModel: ObservableObject {
         center.removePendingNotificationRequests(withIdentifiers: Array(ownPendingIDs))
         ownPendingIDs.removeAll()
         guard snapshot.phase == .running, let deadline = snapshot.deadline else { return }
+        // The current end, then the breaks and rounds that follow it, so each one
+        // sounds even with the app closed.
+        var ends = [(date: deadline, isBreak: isBreak)]
+        let work = isBreak ? workSeconds : snapshot.configuredSeconds
+        while ends.count < 16, let last = ends.last, let next = segment(afterBreak: last.isBreak, work: work) {
+            ends.append((last.date.addingTimeInterval(TimeInterval(next.seconds)), next.isBreak))
+        }
 
         notificationTask = Task { [weak self] in
             let settings = await center.notificationSettings()
@@ -376,27 +414,30 @@ final class TimerModel: ObservableObject {
                 return
             }
             self.notificationNotice = nil
-            let interval = deadline.timeIntervalSinceNow
-            guard interval > 0 else { self.tick(); return }
-            let content = UNMutableNotificationContent()
-            content.title = self.isBreak ? String(localized: "休憩おわり") : String(localized: "タイマー")
-            content.body = String(localized: "時間になりました。")
-            content.sound = self.sound.fileName.map { UNNotificationSound(named: UNNotificationSoundName($0)) }
-            // Every revision has its own ID, including across process restarts.
-            let requestID = self.notificationPrefix + UUID().uuidString
-            self.ownPendingIDs.insert(requestID)
-            let request = UNNotificationRequest(identifier: requestID, content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: max(1, interval), repeats: false))
-            do {
-                try await center.add(request)
-                if Task.isCancelled || currentRevision != self.revision {
-                    // Remove only this obsolete request, never a newer session's.
-                    center.removePendingNotificationRequests(withIdentifiers: [requestID])
-                    self.ownPendingIDs.remove(requestID)
-                }
-            } catch {
-                if currentRevision == self.revision {
-                    self.notificationNotice = String(localized: "終了の通知を設定できませんでした。画面内で時間を確認してください。")
+            guard deadline.timeIntervalSinceNow > 0 else { self.tick(); return }
+            for end in ends {
+                let content = UNMutableNotificationContent()
+                content.title = end.isBreak ? String(localized: "休憩おわり") : String(localized: "タイマー")
+                content.body = String(localized: "時間になりました。")
+                content.sound = self.sound.fileName.map { UNNotificationSound(named: UNNotificationSoundName($0)) }
+                // Every revision has its own ID, including across process restarts.
+                let requestID = self.notificationPrefix + UUID().uuidString
+                self.ownPendingIDs.insert(requestID)
+                let request = UNNotificationRequest(identifier: requestID, content: content,
+                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: max(1, end.date.timeIntervalSinceNow), repeats: false))
+                do {
+                    try await center.add(request)
+                    if Task.isCancelled || currentRevision != self.revision {
+                        // Remove only this obsolete request, never a newer session's.
+                        center.removePendingNotificationRequests(withIdentifiers: [requestID])
+                        self.ownPendingIDs.remove(requestID)
+                        return
+                    }
+                } catch {
+                    if currentRevision == self.revision {
+                        self.notificationNotice = String(localized: "終了の通知を設定できませんでした。画面内で時間を確認してください。")
+                    }
+                    return
                 }
             }
         }
