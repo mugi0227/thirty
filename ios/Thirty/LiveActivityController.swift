@@ -23,7 +23,7 @@ final class LiveActivityController {
         let authorized = ActivityAuthorizationInfo().areActivitiesEnabled
         guard enabled, timing, authorized else {
             #if DEBUG
-            logger.info("Activity skipped: enabled=\(enabled), timing=\(timing), authorized=\(authorized)")
+            logger.notice("Activity skipped: enabled=\(enabled), timing=\(timing), authorized=\(authorized)")
             #endif
             end()
             return
@@ -46,7 +46,7 @@ final class LiveActivityController {
                 guard !Task.isCancelled else { return }
                 await current.update(content)
                 #if DEBUG
-                self.logger.info("Activity updated: \(skinID, privacy: .public)")
+                self.logger.notice("Activity updated: \(skinID, privacy: .public)")
                 #endif
             }
         } else {
@@ -54,7 +54,7 @@ final class LiveActivityController {
             do {
                 current = try Activity.request(attributes: TimerActivityAttributes(skinID: skinID, slats: slats), content: content)
                 #if DEBUG
-                logger.info("Activity requested: \(skinID, privacy: .public)")
+                logger.notice("Activity requested: \(skinID, privacy: .public)")
                 #endif
             } catch {
                 #if DEBUG
