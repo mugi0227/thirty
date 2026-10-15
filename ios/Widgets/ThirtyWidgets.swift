@@ -101,15 +101,17 @@ struct StartControl: ControlWidget {
 struct TimerLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TimerActivityAttributes.self) { context in
+            let skinID = context.state.skinID ?? context.attributes.skinID
             LockScreenTimer(context: context)
-                .activityBackgroundTint(LCDPalette.colors(for: context.attributes.skinID).lcd)
-                .activitySystemActionForegroundColor(LCDPalette.colors(for: context.attributes.skinID).ink)
+                .activityBackgroundTint(LCDPalette.colors(for: skinID).lcd)
+                .activitySystemActionForegroundColor(LCDPalette.colors(for: skinID).ink)
         } dynamicIsland: { context in
-            let ink = LCDPalette.colors(for: context.attributes.skinID).ink
+            let ink = LCDPalette.islandInk(for: context.state.skinID ?? context.attributes.skinID)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 14) {
-                        ActivitySlats(state: context.state, ink: ink).frame(height: 44)
+                        ActivitySlats(state: context.state, ink: ink,
+                                      count: context.state.slats ?? context.attributes.slats).frame(height: 44)
                         ActivityTime(state: context.state).font(.system(size: 30, weight: .light, design: .monospaced))
                             .foregroundStyle(ink)
                             .frame(width: 104, alignment: .trailing)
@@ -135,9 +137,10 @@ struct LockScreenTimer: View {
     let context: ActivityViewContext<TimerActivityAttributes>
 
     var body: some View {
-        let colors = LCDPalette.colors(for: context.attributes.skinID)
+        let colors = LCDPalette.colors(for: context.state.skinID ?? context.attributes.skinID)
         HStack(spacing: 14) {
-            ActivitySlats(state: context.state, ink: colors.ink)
+            ActivitySlats(state: context.state, ink: colors.ink,
+                          count: context.state.slats ?? context.attributes.slats)
             Rectangle().fill(colors.ink.opacity(0.16)).frame(width: 1.5)
             VStack(alignment: .trailing, spacing: 2) {
                 if context.state.isBreak {
@@ -169,9 +172,11 @@ struct ActivitySlats: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let width = max(1, (geometry.size.width - gap * CGFloat(count - 1)) / CGFloat(count))
+            // Sixty slats also need to fit beside the digits on a narrow screen.
+            let spacing = min(gap, max(0, (geometry.size.width - CGFloat(count)) / CGFloat(max(1, count - 1))))
+            let width = max(1, (geometry.size.width - spacing * CGFloat(count - 1)) / CGFloat(count))
             let height = geometry.size.height
-            HStack(spacing: gap) {
+            HStack(spacing: spacing) {
                 ForEach(0..<count, id: \.self) { index in
                     slat(index, length: height)
                         .frame(width: width, height: height)

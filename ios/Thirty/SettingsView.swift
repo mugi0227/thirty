@@ -50,11 +50,16 @@ struct SettingsView: View {
                             SkinSample(skin: skin, lit: 3, slats: 4, compact: true).frame(width: 34, height: 40)
                         }
                     }
-                    plusPicker(String(localized: "終了音"), selection: $model.endSound) {
-                        ForEach(EndSound.allCases) { sound in
-                            Text(sound.title + (sound.isFree || plus ? "" : " 🔒")).tag(sound)
+                    NavigationLink {
+                        EndSoundPicker(selection: $model.endSound, store: store, effects: model.soundEffects)
+                    } label: {
+                        HStack {
+                            Text(String(localized: "終了音"))
+                            Spacer()
+                            Text((plus ? model.endSound : .chime).title).foregroundStyle(.secondary)
                         }
-                    } isAllowed: { $0.isFree }
+                    }
+                    .accessibilityIdentifier("end-sound-settings")
                     plusToggle(String(localized: "休憩をはさんでくり返す"), isOn: $model.cycleEnabled)
                     if plus && model.cycleEnabled {
                         Stepper(String(localized: "休憩 \(model.breakMinutes)分"), value: $model.breakMinutes, in: 1...30)

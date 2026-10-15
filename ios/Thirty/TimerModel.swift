@@ -81,6 +81,7 @@ final class TimerModel: ObservableObject {
     private var revision = 0
     private var isActive = false
     private let effects = TimerEffects()
+    var soundEffects: TimerEffects { effects }
     private let activity = LiveActivityController()
     /// The focus duration to come back to after a break.
     private var workSeconds: Int
@@ -279,6 +280,10 @@ final class TimerModel: ObservableObject {
     private func syncActivity() {
         activity.sync(countdown: countdown, at: now, enabled: hasPlus && liveActivityEnabled,
                       skinID: defaults.string(forKey: "skin") ?? "classic", slats: effectiveSlats, isBreak: isBreak)
+    }
+
+    func refreshActivityAppearance() {
+        syncActivity()
     }
 
     private func persist() {

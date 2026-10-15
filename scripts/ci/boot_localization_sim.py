@@ -1,10 +1,11 @@
 """Boot once; each UI test supplies its own app language, without changing SpringBoard."""
 import json
+import os
 import subprocess
 import sys
 
 name = sys.argv[1]
-runtime_preference = 'com.apple.CoreSimulator.SimRuntime.iOS-26-2'
+runtime_preference = os.environ.get('THIRTY_SIM_RUNTIME', 'com.apple.CoreSimulator.SimRuntime.iOS-26-2')
 devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))['devices']
 matches = sorted((runtime, device['udid']) for runtime, items in devices.items() if 'iOS' in runtime
                  for device in items if device['name'] == name)

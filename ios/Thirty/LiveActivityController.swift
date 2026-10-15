@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import OSLog
 
 /// Thirty+: mirrors the timer on the Lock Screen, in StandBy and the Dynamic
 /// Island. The system counts down to the deadline, so updates happen only on
@@ -7,6 +8,10 @@ import Foundation
 @MainActor
 final class LiveActivityController {
     private var current: Activity<TimerActivityAttributes>?
+    private var updateTask: Task<Void, Never>?
+    #if DEBUG
+    private let logger = Logger(subsystem: "jp.mugilab.thirty.activity", category: "LiveActivity")
+    #endif
 
     init() {
         // A previous process may have left one behind.
@@ -15,7 +20,11 @@ final class LiveActivityController {
 
     func sync(countdown: Countdown, at now: Date, enabled: Bool, skinID: String, slats: Int, isBreak: Bool) {
         let timing = countdown.phase == .running || countdown.phase == .paused
-        guard enabled, timing, ActivityAuthorizationInfo().areActivitiesEnabled else {
+        let authorized = ActivityAuthorizationInfo().areActivitiesEnabled
+        guard enabled, timing, authorized else {
+            #if DEBUG
+            logger.notice("Activity skipped: enabled=\(enabled), timing=\(timing), authorized=\(authorized)")
+            #endif
             end()
             return
         }
@@ -24,18 +33,40 @@ final class LiveActivityController {
             deadline: countdown.phase == .running ? countdown.deadline?.addingTimeInterval(-AppClock.lead) : nil,
             remaining: countdown.remaining(at: now),
             total: TimeInterval(countdown.configuredSeconds),
-            isBreak: isBreak)
+            isBreak: isBreak, skinID: skinID, slats: slats)
         let staleDate = countdown.phase == .running ? countdown.deadline?.addingTimeInterval(60) : nil
         let content = ActivityContent(state: state, staleDate: staleDate)
-        if let current, current.attributes.skinID == skinID, current.attributes.slats == slats {
-            Task { await current.update(content) }
+        if let current {
+            // Keep one activity when its appearance changes. Serialize updates
+            // so a rapid sequence of skin choices ends with the latest choice.
+            let previous = updateTask
+            previous?.cancel()
+            updateTask = Task {
+                await previous?.value
+                guard !Task.isCancelled else { return }
+                await current.update(content)
+                #if DEBUG
+                self.logger.notice("Activity updated: \(skinID, privacy: .public)")
+                #endif
+            }
         } else {
             end()
-            current = try? Activity.request(attributes: TimerActivityAttributes(skinID: skinID, slats: slats), content: content)
+            do {
+                current = try Activity.request(attributes: TimerActivityAttributes(skinID: skinID, slats: slats), content: content)
+                #if DEBUG
+                logger.notice("Activity requested: \(skinID, privacy: .public)")
+                #endif
+            } catch {
+                #if DEBUG
+                logger.error("Activity request failed: \(String(describing: error), privacy: .public)")
+                #endif
+            }
         }
     }
 
     func end() {
+        updateTask?.cancel()
+        updateTask = nil
         let ending = Activity<TimerActivityAttributes>.activities
         current = nil
         for activity in ending {
