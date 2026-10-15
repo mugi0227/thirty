@@ -15,6 +15,11 @@ on:
         type: choice
         options: [none, plan, create]
         default: none
+      plus_english_localization:
+        description: English Thirty+ product text (plan is GET-only)
+        type: choice
+        options: [none, plan, add]
+        default: none
       target_build:
         description: Wait for this uploaded build to finish processing (empty skips)
         type: string
@@ -33,7 +38,7 @@ jobs:
       - uses: actions/checkout@v5
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
       - name: Inspect App Review readiness through GET requests only
-        if: ${{ !inputs.iap_diagnosis && !inputs.repair_app_availability && (inputs.diagnostic_product == 'none' || inputs.diagnostic_product == '') }}
+        if: ${{ !inputs.iap_diagnosis && !inputs.repair_app_availability && (inputs.diagnostic_product == 'none' || inputs.diagnostic_product == '') && (inputs.plus_english_localization == 'none' || inputs.plus_english_localization == '') }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -49,7 +54,7 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: python3 -u scripts/set_app_availability.py --apply
       - name: Inspect current In-App Purchase catalog through GET requests only
-        if: ${{ inputs.iap_diagnosis || inputs.repair_app_availability || inputs.diagnostic_product == 'create' }}
+        if: ${{ inputs.iap_diagnosis || inputs.repair_app_availability || inputs.diagnostic_product == 'create' || inputs.plus_english_localization == 'add' }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -68,6 +73,19 @@ jobs:
           else
             python3 -u scripts/create_diagnostic_iap.py
           fi
+      - name: Plan or add only the English Thirty+ product text
+        if: ${{ inputs.plus_english_localization == 'plan' || inputs.plus_english_localization == 'add' }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          LOCALIZATION_ACTION: ${{ inputs.plus_english_localization }}
+        run: |
+          if [ "$LOCALIZATION_ACTION" = add ]; then
+            python3 -u scripts/add_plus_english.py --apply
+          else
+            python3 -u scripts/add_plus_english.py
+          fi
       - uses: actions/upload-artifact@v5
         if: always()
         with:
@@ -78,4 +96,6 @@ jobs:
             app-availability-verification.json
             diagnostic-iap-plan.json
             diagnostic-iap-result.json
+            plus-localization-plan.json
+            plus-localization-result.json
           retention-days: 7
