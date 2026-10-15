@@ -20,6 +20,11 @@ on:
         type: choice
         options: [none, plan, add]
         default: none
+      working_product:
+        description: Make the device-verified product Thirty+ (plan is GET-only)
+        type: choice
+        options: [none, plan, promote]
+        default: none
       target_build:
         description: Wait for this uploaded build to finish processing (empty skips)
         type: string
@@ -38,7 +43,7 @@ jobs:
       - uses: actions/checkout@v5
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
       - name: Inspect App Review readiness through GET requests only
-        if: ${{ !inputs.iap_diagnosis && !inputs.repair_app_availability && (inputs.diagnostic_product == 'none' || inputs.diagnostic_product == '') && (inputs.plus_english_localization == 'none' || inputs.plus_english_localization == '') }}
+        if: ${{ !inputs.iap_diagnosis && !inputs.repair_app_availability && (inputs.diagnostic_product == 'none' || inputs.diagnostic_product == '') && (inputs.plus_english_localization == 'none' || inputs.plus_english_localization == '') && (inputs.working_product == 'none' || inputs.working_product == '') }}
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -86,6 +91,19 @@ jobs:
           else
             python3 -u scripts/add_plus_english.py
           fi
+      - name: Plan or promote the device-verified product to Thirty+
+        if: ${{ inputs.working_product == 'plan' || inputs.working_product == 'promote' }}
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          PROMOTION_ACTION: ${{ inputs.working_product }}
+        run: |
+          if [ "$PROMOTION_ACTION" = promote ]; then
+            python3 -u scripts/promote_working_iap.py --apply
+          else
+            python3 -u scripts/promote_working_iap.py
+          fi
       - uses: actions/upload-artifact@v5
         if: always()
         with:
@@ -98,4 +116,6 @@ jobs:
             diagnostic-iap-result.json
             plus-localization-plan.json
             plus-localization-result.json
+            working-iap-promotion-plan.json
+            working-iap-promotion-result.json
           retention-days: 7
