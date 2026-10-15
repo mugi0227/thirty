@@ -110,7 +110,8 @@ struct TimerLiveActivity: Widget {
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 14) {
-                        ActivitySlats(state: context.state, ink: ink).frame(height: 44)
+                        ActivitySlats(state: context.state, ink: ink,
+                                      count: context.state.slats ?? context.attributes.slats).frame(height: 44)
                         ActivityTime(state: context.state).font(.system(size: 30, weight: .light, design: .monospaced))
                             .foregroundStyle(ink)
                             .frame(width: 104, alignment: .trailing)
@@ -171,9 +172,11 @@ struct ActivitySlats: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let width = max(1, (geometry.size.width - gap * CGFloat(count - 1)) / CGFloat(count))
+            // Sixty slats also need to fit beside the digits on a narrow screen.
+            let spacing = min(gap, max(0, (geometry.size.width - CGFloat(count)) / CGFloat(max(1, count - 1))))
+            let width = max(1, (geometry.size.width - spacing * CGFloat(count - 1)) / CGFloat(count))
             let height = geometry.size.height
-            HStack(spacing: gap) {
+            HStack(spacing: spacing) {
                 ForEach(0..<count, id: \.self) { index in
                     slat(index, length: height)
                         .frame(width: width, height: height)
