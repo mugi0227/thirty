@@ -1,7 +1,7 @@
 import XCTest
 import UIKit
 
-final class LiveActivityAppearanceTests: XCTestCase {
+final class TimerLiveActivityTests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
@@ -94,5 +94,10 @@ final class LiveActivityAppearanceTests: XCTestCase {
                 shot("island-skin-" + skin)
             }
         }
+        // Leave the process responsive in the foreground for the next test run.
+        app.activate()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
+        app.buttons["終了"].tap()
+        XCTAssertTrue(app.buttons["開始"].waitForExistence(timeout: 5))
     }
 }

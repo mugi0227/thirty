@@ -52,13 +52,21 @@ jobs:
               -test-timeouts-enabled YES \
               -maximum-test-execution-time-allowance 300 \
               -only-testing:ThirtyUITests/SoundPreviewTests \
-              -only-testing:ThirtyUITests/LiveActivityAppearanceTests \
+              -only-testing:ThirtyUITests/TimerLiveActivityTests \
               CODE_SIGNING_ALLOWED=NO test-without-building \
               > "../sound-$slug.log" 2>&1
             grep -E 'Test Case.*(passed|failed)|error:|TEST (SUCCEEDED|FAILED)' "../sound-$slug.log"
-            xcrun simctl spawn "$udid" log show --last 20m --style compact \
-              --predicate 'subsystem == "jp.mugilab.thirty.activity"' \
-              > "../sound-activity-$slug.log" 2>&1
+            python3 - "$udid" "../sound-activity-$slug.log" <<'PY'
+          import subprocess, sys
+          with open(sys.argv[2], 'w') as output:
+              try:
+                  subprocess.run(['xcrun', 'simctl', 'spawn', sys.argv[1], 'log', 'show',
+                                  '--last', '20m', '--style', 'compact', '--predicate',
+                                  'subsystem == "jp.mugilab.thirty.activity"'],
+                                 stdout=output, stderr=subprocess.STDOUT, timeout=20)
+              except subprocess.TimeoutExpired:
+                  output.write('Diagnostic log collection timed out; test results are recorded separately.\n')
+          PY
             if [ "$device" = 'iPhone 17' ]; then
               swift ../scripts/ci/check_island_screenshots.swift "../sound-screenshots/$slug"
             fi
