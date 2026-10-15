@@ -305,8 +305,7 @@ struct TimerView: View {
             .allowsHitTesting(!timing)
             .accessibilityHidden(timing)
             HStack(spacing: 0) {
-                RepeatButton(isOn: store.hasPlus && model.repeatEnabled, locked: !store.hasPlus,
-                             size: compact ? 44 : 56, cell: compact ? 2 : 2.4) {
+                RepeatButton(isOn: store.hasPlus && model.repeatEnabled, locked: !store.hasPlus, size: compact ? 44 : 56) {
                     lastTouch = Date()
                     if store.hasPlus { model.repeatEnabled.toggle() } else { showPlus = true }
                 }
@@ -314,18 +313,17 @@ struct TimerView: View {
                 HStack(spacing: compact ? 10 : 14) {
                     if model.countdown.phase != .ready {
                         Button { lastTouch = Date(); model.reset(); showHint = false } label: {
-                            PixelIcon(art: PixelArt.stop, cell: compact ? 2 : 2.4)
+                            Image(systemName: "stop.fill").font(.system(size: 17))
                                 .frame(width: compact ? 48 : 56, height: compact ? 48 : 56)
                                 .background(skin.soft, in: Circle())
                         }
                         .buttonStyle(SoftPressStyle()).accessibilityLabel(String(localized: "終了"))
                     }
                     Button(action: primaryAction) {
-                        PixelIcon(art: model.countdown.phase == .running ? PixelArt.pause : PixelArt.play,
-                                  cell: compact ? 2.4 : 2.8, color: skin.lcd)
-                            // The triangle's weight sits left; nudge it to look centred.
-                            .offset(x: model.countdown.phase == .running ? 0 : (compact ? 2 : 3))
+                        Image(systemName: model.countdown.phase == .running ? "pause.fill" : "play.fill")
+                            .font(.system(size: compact ? 24 : 28))
                             .frame(width: compact ? 64 : 76, height: compact ? 64 : 76)
+                            .foregroundStyle(skin.lcd)
                             .background(skin.ink, in: Circle())
                     }
                     .buttonStyle(SoftPressStyle())
@@ -338,8 +336,7 @@ struct TimerView: View {
                     }
                 }
                 Spacer(minLength: 0)
-                BreakButton(minutes: model.breakMinutes, locked: !store.hasPlus,
-                            size: compact ? 44 : 56, cell: compact ? 2 : 2.4) {
+                BreakButton(minutes: model.breakMinutes, locked: !store.hasPlus, size: compact ? 44 : 56) {
                     lastTouch = Date()
                     showPlus = true
                 } onChange: {
@@ -679,7 +676,7 @@ struct TimePickerView: View {
     private func setLabel(_ set: TimerSet) -> some View {
         HStack(spacing: 5) {
             Text(set.title).font(.headline.monospacedDigit())
-            if set.breakMinutes > 0 { PixelIcon(art: PixelArt.coffee, cell: 1.4, color: .primary) }
+            if set.breakMinutes > 0 { Image(systemName: "cup.and.saucer.fill").font(.caption.weight(.bold)) }
             if set.repeats { Image(systemName: "repeat").font(.caption.weight(.bold)) }
         }
         .padding(.horizontal, 14).frame(minHeight: 44)

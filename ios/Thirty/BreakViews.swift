@@ -5,9 +5,6 @@ import SwiftUI
 struct PixelGrid: View {
     @Environment(\.skin) private var skin
     let cells: [[Bool]]
-    /// Outside the LCD, such as in a system sheet, pass the text colour.
-    var color: Color?
-    var showsGhost = true
     /// The gap between dots, as a share of one dot.
     var gap: CGFloat = 0.14
 
@@ -26,9 +23,8 @@ struct PixelGrid: View {
                     if on { lit.addRect(rect) } else { unlit.addRect(rect) }
                 }
             }
-            let ink = color ?? skin.ink
-            if showsGhost { context.fill(unlit, with: .color(ink.opacity(0.075))) }
-            context.fill(lit, with: .color(ink))
+            context.fill(unlit, with: .color(skin.ghost))
+            context.fill(lit, with: .color(skin.ink))
         }
         .aspectRatio(CGFloat(columns) / CGFloat(rows), contentMode: .fit)
         .accessibilityHidden(true)
@@ -89,51 +85,6 @@ struct CoffeeCup: View {
     }
 }
 
-/// Small dot pictures for the controls. Every icon is drawn at the same dot
-/// size, so they read as one display.
-enum PixelArt {
-    static let play = ["#.....", "##....", "###...", "####..", "#####.", "######",
-                       "#####.", "####..", "###...", "##....", "#....."]
-    static let pause = Array(repeating: "###..###", count: 11)
-    static let stop = Array(repeating: "#########", count: 9)
-    static let repeatLoop = [
-        ".........#...",
-        ".........##..",
-        "..##########.",
-        ".#.......##..",
-        ".#.......#.#.",
-        ".#.........#.",
-        ".#.#.......#.",
-        "..##.......#.",
-        ".##########..",
-        "..##.........",
-        "...#.........",
-    ]
-    static let coffee = [
-        "..#..#....",
-        ".#..#.....",
-        "..........",
-        "#########.",
-        "########.#",
-        "########.#",
-        "#########.",
-        ".######...",
-    ]
-    static let lock = [".###.", "#...#", "#...#", "#####", "##.##", "##.##", "#####"]
-}
-
-struct PixelIcon: View {
-    let art: [String]
-    var cell: CGFloat = 2.4
-    /// Outside the LCD, or on a filled button, pass the colour.
-    var color: Color?
-
-    var body: some View {
-        PixelGrid(cells: art.map { $0.map { $0 == "#" } }, color: color, showsGhost: false, gap: 0)
-            .frame(width: CGFloat(art[0].count) * cell, height: CGFloat(art.count) * cell)
-    }
-}
-
 /// "+10" or "−1" in the same segments as the time, unlit segments faintly showing.
 struct SegmentText: View {
     @Environment(\.skin) private var skin
@@ -190,12 +141,11 @@ struct RepeatButton: View {
     let isOn: Bool
     let locked: Bool
     var size: CGFloat = 56
-    var cell: CGFloat = 2.4
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            PixelIcon(art: PixelArt.repeatLoop, cell: cell)
+            Image(systemName: "repeat").font(.system(size: 19, weight: .semibold))
                 .opacity(isOn ? 1 : 0.4)
                 .modeButton(isOn: isOn, locked: locked, size: size, skin: skin)
         }
@@ -212,7 +162,6 @@ struct BreakButton: View {
     let minutes: Int
     let locked: Bool
     var size: CGFloat = 56
-    var cell: CGFloat = 2.4
     let onLocked: () -> Void
     let onChange: (Int) -> Void
     static let choices = [0, 5, 10, 15, 20, 30]
@@ -245,10 +194,9 @@ struct BreakButton: View {
     private var on: Bool { minutes > 0 && !locked }
 
     private var label: some View {
-        VStack(spacing: cell * 1.5) {
-            PixelIcon(art: PixelArt.coffee, cell: cell)
-            // Off reads as a dash, like an empty LCD field.
-            SegmentText(text: on ? "\(minutes)" : "-", height: cell * 4.5)
+        VStack(spacing: 1) {
+            Image(systemName: on ? "cup.and.saucer.fill" : "cup.and.saucer").font(.system(size: 17, weight: .semibold))
+            Text(on ? "\(minutes)" : "–").font(.system(size: 11, weight: .bold).monospacedDigit())
         }
         .opacity(on ? 1 : 0.4)
         .modeButton(isOn: on, locked: locked, size: size, skin: skin)
@@ -263,7 +211,7 @@ private extension View {
             .overlay(Circle().stroke(isOn ? .clear : skin.line, lineWidth: 1.5))
             .overlay(alignment: .topTrailing) {
                 if locked {
-                    PixelIcon(art: PixelArt.lock, cell: 1.6)
+                    Image(systemName: "lock.fill").font(.system(size: 10, weight: .bold))
                         .padding(4).background(skin.lcd, in: Circle())
                 }
             }
