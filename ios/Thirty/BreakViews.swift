@@ -85,7 +85,8 @@ struct CoffeeCup: View {
     }
 }
 
-/// "+10" or "−1" in the same segments as the time, unlit segments faintly showing.
+/// "+10" or "−1" in the same segments as the time. At button size the unlit
+/// segments only add noise, so they are left out.
 struct SegmentText: View {
     @Environment(\.skin) private var skin
     let text: String
@@ -94,31 +95,25 @@ struct SegmentText: View {
     var body: some View {
         HStack(spacing: height * 0.14) {
             ForEach(Array(text.enumerated()), id: \.offset) { _, character in
-                ZStack {
-                    glyph(character, lit: false).fill(skin.ink.opacity(0.07))
-                    glyph(character, lit: true).fill(skin.ink)
-                }
-                .frame(width: height * 0.55, height: height)
+                glyph(character).fill(skin.ink)
+                    .frame(width: height * 0.55, height: height)
             }
         }
         .accessibilityHidden(true)
     }
 
-    private func glyph(_ character: Character, lit: Bool) -> AnyShape {
+    private func glyph(_ character: Character) -> AnyShape {
         switch character {
-        case "+", "−", "-":
-            let parts: Set<SegmentSign.Part> = character == "+" ? [.bar, .stem] : [.bar]
-            return AnyShape(SegmentSign(parts: lit ? parts : Set(SegmentSign.Part.allCases).subtracting(parts)))
-        default:
-            let segments = SegmentDigit.masks[character.wholeNumberValue ?? 0]
-            return AnyShape(SegmentDigit(segments: lit ? segments : Set(0..<7).subtracting(segments)))
+        case "+": return AnyShape(SegmentSign(parts: [.bar, .stem]))
+        case "−", "-": return AnyShape(SegmentSign(parts: [.bar]))
+        default: return AnyShape(SegmentDigit(segments: SegmentDigit.masks[character.wholeNumberValue ?? 0]))
         }
     }
 }
 
 /// Plus and minus on the digits' 22×40 grid: the middle bar and a split stem.
 struct SegmentSign: Shape {
-    enum Part: CaseIterable { case bar, stem }
+    enum Part { case bar, stem }
     let parts: Set<Part>
 
     func path(in rect: CGRect) -> Path {

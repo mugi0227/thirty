@@ -103,9 +103,10 @@ final class TimerModel: ObservableObject {
         self.endSound = EndSound(rawValue: defaults.string(forKey: "endSound") ?? "") ?? .chime
         // Before repeat and break were separate, one switch turned on both.
         let legacyCycle = defaults.bool(forKey: "cycleEnabled")
-        self.repeatEnabled = defaults.object(forKey: "repeatEnabled") as? Bool ?? legacyCycle
-        self.breakMinutes = defaults.object(forKey: "breakLength") as? Int
-            ?? (legacyCycle ? defaults.object(forKey: "breakMinutes") as? Int ?? 5 : 0)
+        // bool(forKey:) and integer(forKey:) also read launch arguments, which arrive as strings.
+        self.repeatEnabled = defaults.object(forKey: "repeatEnabled") != nil ? defaults.bool(forKey: "repeatEnabled") : legacyCycle
+        self.breakMinutes = defaults.object(forKey: "breakLength") != nil ? defaults.integer(forKey: "breakLength")
+            : legacyCycle ? defaults.object(forKey: "breakMinutes") as? Int ?? 5 : 0
         self.savedSets = defaults.data(forKey: "savedSets").flatMap { try? JSONDecoder().decode([TimerSet].self, from: $0) } ?? []
         self.slatCount = defaults.integer(forKey: "slatCount") == 60 ? 60 : 30
         self.showSeconds = defaults.object(forKey: "showSeconds") as? Bool ?? true

@@ -156,7 +156,8 @@ final class ScreenshotTests: XCTestCase {
         sleep(1)
         shot("20-repeat-break")
 
-        app.buttons["時間を変更"].tap()
+        // The digits' button has no visible accessibility frame, so tap where they are drawn.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.67)).tap()
         XCTAssertTrue(app.buttons["save-set"].waitForExistence(timeout: 5))
         app.buttons["save-set"].tap()
         sleep(1)
