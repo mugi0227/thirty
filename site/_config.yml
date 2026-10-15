@@ -1,0 +1,5 @@
+title: Thirty
+description: とりあえず30分タイマー
+lang: ja
+theme: jekyll-theme-primer
+exclude: [README.md]

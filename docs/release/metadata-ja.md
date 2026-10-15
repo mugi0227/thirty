@@ -67,8 +67,8 @@ Thirtyは、スマホの画面全体を、昔ながらのバータイマーに�
 
 | 項目 | 内容 |
 | --- | --- |
-| サポートURL | https://github.com/mugi0227/thirty/blob/main/docs/release/support.md |
-| プライバシーポリシーURL | https://github.com/mugi0227/thirty/blob/main/docs/release/privacy-policy.md |
+| サポートURL | https://mugi0227.github.io/thirty-support/support/ |
+| プライバシーポリシーURL | https://mugi0227.github.io/thirty-support/privacy-policy/ |
 | 著作権 | © 2026 （開発者名を入れてください） |
 | 価格 | 無料（App内課金あり） |
 | 年齢制限 | 質問票はすべて「なし」→ 4+ |

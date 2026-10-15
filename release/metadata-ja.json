@@ -4,14 +4,14 @@
   "app_info": {
     "name": "Thirty - とりあえず30分タイマー",
     "subtitle": "スマホをバータイマーにして集中・勉強に。",
-    "privacy_policy_url": "https://github.com/mugi0227/thirty/blob/main/docs/release/privacy-policy.md",
+    "privacy_policy_url": "https://mugi0227.github.io/thirty-support/privacy-policy/",
     "primary_category": "PRODUCTIVITY",
     "secondary_category": "UTILITIES"
   },
   "version": {
     "copyright": "2026 mugilab",
-    "support_url": "https://github.com/mugi0227/thirty/blob/main/docs/release/support.md",
-    "marketing_url": "https://github.com/mugi0227/thirty",
+    "support_url": "https://mugi0227.github.io/thirty-support/support/",
+    "marketing_url": "https://mugi0227.github.io/thirty-support/",
     "promotional_text": "やるべきことがあるのに、SNSを見てしまう日に。考える前にスタートを押せば、あとは減っていく棒を眺めるだけ。タイマーは無料、広告もありません。",
     "keywords": "集中,勉強,作業,ポモドーロ,バータイマー,ビジュアルタイマー,キッチンタイマー,アクセスガイド,SNS,やる気,カウントダウン,時間管理,ダラダラ,サーティ",
     "description_file": "release/description-ja.txt",

@@ -88,9 +88,9 @@ struct SettingsView: View {
                     if !plus {
                         Button(String(localized: "購入を復元")) { Task { await store.restore() } }
                     }
-                    Link(String(localized: "プライバシーポリシー"), destination: URL(string: "https://github.com/mugi0227/thirty/blob/main/docs/release/privacy-policy.md")!)
+                    Link(String(localized: "プライバシーポリシー"), destination: URL(string: "https://mugi0227.github.io/thirty-support/privacy-policy/")!)
                         .accessibilityIdentifier("privacy-policy-link")
-                    Link(String(localized: "サポート"), destination: URL(string: "https://github.com/mugi0227/thirty/blob/main/docs/release/support.md")!)
+                    Link(String(localized: "サポート"), destination: URL(string: "https://mugi0227.github.io/thirty-support/support/")!)
                         .accessibilityIdentifier("support-link")
                 }
             }

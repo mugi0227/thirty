@@ -10,8 +10,8 @@
 | App Storeのスクリーンショット（キャプション付き） | [store/iphone-medium](store/iphone-medium/)（1206×2622、必須）、[store/iphone-large](store/iphone-large/)（1320×2868）、[store/ipad-13](store/ipad-13/)（2064×2752、必須）。CIの成果物 `store-*` からも取得可 | 撮影済み |
 | App プレビュー動画（886×1920、30fps、H.264、約23.6秒。デバッグ版の早送り録画に見出し、Dynamic Islandの拡大、音を追加） | [store/app-preview-iphone-6.9.mp4](store/app-preview-iphone-6.9.mp4) | 編集済み |
 | 説明文、キーワード、サブタイトルなど | [metadata-ja.md](metadata-ja.md) | 下書き済み |
-| プライバシーポリシー | [privacy-policy.md](privacy-policy.md) | 下書き済み |
-| サポートページ | [support.md](support.md) | 下書き済み |
+| プライバシーポリシー | [site/privacy-policy.md](../../site/privacy-policy.md)（公開先と手順は [site/README.md](../../site/README.md)） | 下書き済み |
+| サポートページ | [site/support.md](../../site/support.md)（公開先と手順は [site/README.md](../../site/README.md)） | 下書き済み |
 | App Reviewへのメモ、App内課金の情報 | [review-notes.md](review-notes.md) | 下書き済み |
 | プライバシーマニフェスト | `ios/Thirty/PrivacyInfo.xcprivacy`、`ios/Widgets/PrivacyInfo.xcprivacy` | 追加済み（追跡なし、収集なし、UserDefaultsの理由 CA92.1） |
 | 暗号化の申告 | `ITSAppUsesNonExemptEncryption = NO` | 設定済み |
