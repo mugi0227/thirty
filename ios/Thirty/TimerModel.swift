@@ -52,11 +52,16 @@ final class TimerModel: ObservableObject {
     @Published var endSound: EndSound {
         didSet { defaults.set(endSound.rawValue, forKey: "endSound"); syncNotification(requestPermission: false) }
     }
-    @Published var cycleEnabled: Bool {
-        didSet { defaults.set(cycleEnabled, forKey: "cycleEnabled"); if !cycleEnabled { endBreak() } }
+    /// Like a music player's repeat: the session (and its break) starts over until stopped.
+    @Published var repeatEnabled: Bool {
+        didSet { defaults.set(repeatEnabled, forKey: "repeatEnabled") }
     }
+    /// The break that follows each focus session; 0 is none.
     @Published var breakMinutes: Int {
-        didSet { defaults.set(breakMinutes, forKey: "breakMinutes") }
+        didSet { defaults.set(breakMinutes, forKey: "breakLength") }
+    }
+    @Published var savedSets: [TimerSet] {
+        didSet { if let data = try? JSONEncoder().encode(savedSets) { defaults.set(data, forKey: "savedSets") } }
     }
     @Published var slatCount: Int {
         didSet { defaults.set(slatCount, forKey: "slatCount") }
@@ -70,7 +75,7 @@ final class TimerModel: ObservableObject {
     @Published var hasPlus = false {
         didSet { if oldValue != hasPlus { syncNotification(requestPermission: false); syncActivity() } }
     }
-    /// The break between rounds when the cycle is on.
+    /// The break after a focus session.
     @Published private(set) var isBreak: Bool
 
     private let defaults: UserDefaults
@@ -96,8 +101,12 @@ final class TimerModel: ObservableObject {
         self.faceDownScreenOff = defaults.object(forKey: "faceDownScreenOff") as? Bool ?? true
         self.startOnLaunch = defaults.bool(forKey: "startOnLaunch")
         self.endSound = EndSound(rawValue: defaults.string(forKey: "endSound") ?? "") ?? .chime
-        self.cycleEnabled = defaults.bool(forKey: "cycleEnabled")
-        self.breakMinutes = defaults.object(forKey: "breakMinutes") as? Int ?? 5
+        // Before repeat and break were separate, one switch turned on both.
+        let legacyCycle = defaults.bool(forKey: "cycleEnabled")
+        self.repeatEnabled = defaults.object(forKey: "repeatEnabled") as? Bool ?? legacyCycle
+        self.breakMinutes = defaults.object(forKey: "breakLength") as? Int
+            ?? (legacyCycle ? defaults.object(forKey: "breakMinutes") as? Int ?? 5 : 0)
+        self.savedSets = defaults.data(forKey: "savedSets").flatMap { try? JSONDecoder().decode([TimerSet].self, from: $0) } ?? []
         self.slatCount = defaults.integer(forKey: "slatCount") == 60 ? 60 : 30
         self.showSeconds = defaults.object(forKey: "showSeconds") as? Bool ?? true
         self.liveActivityEnabled = defaults.object(forKey: "liveActivityEnabled") as? Bool ?? true
@@ -135,7 +144,8 @@ final class TimerModel: ObservableObject {
         return String(format: "%02d", Int(ceil(Double(seconds) / 60)))
     }
     var lastMinutes: Int { max(1, Int(ceil(Double(isBreak ? workSeconds : countdown.configuredSeconds) / 60))) }
-    private var cycleActive: Bool { hasPlus && cycleEnabled }
+    /// How full the coffee cup is during a break.
+    func cupLevel(levels: Int) -> Int { countdown.bars(at: now, slats: levels) }
     private var sound: EndSound { hasPlus ? endSound : .chime }
     var remainingLabel: String { String(localized: "残り\(seconds / 60)分\(seconds % 60)秒") }
 
@@ -152,21 +162,24 @@ final class TimerModel: ObservableObject {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 // Rounds chain only while the app is open; a session that ended in
                 // the background just shows as finished on return.
-                if countdown.phase == .finished && cycleActive { nextRound() }
+                if countdown.phase == .finished && hasPlus { nextRound() }
             }
         }
     }
 
-    /// Focus → break → focus, until the stop button.
+    /// Focus → break, and with repeat, round again until the stop button.
     private func nextRound() {
         if isBreak {
+            guard repeatEnabled else { return }
             setBreak(false)
             countdown.setSeconds(workSeconds, at: now)
-        } else {
+        } else if breakMinutes > 0 {
             workSeconds = countdown.configuredSeconds
             defaults.set(workSeconds, forKey: "workSeconds")
             setBreak(true)
-            countdown.setSeconds(max(1, breakMinutes) * 60, at: now)
+            countdown.setSeconds(breakMinutes * 60, at: now)
+        } else {
+            guard repeatEnabled else { return }
         }
         countdown.start(at: now)
         changed(requestPermission: false)
@@ -189,6 +202,7 @@ final class TimerModel: ObservableObject {
     func startNow(minutes: Int? = nil) {
         tick(announceCompletion: false)
         guard countdown.phase != .running else { return }
+        if isBreak { endBreak() }
         if let minutes { setSeconds(minutes * 60) }
         if countdown.configuredSeconds == 0 { setSeconds(Countdown.defaultSeconds) }
         start()
@@ -249,6 +263,8 @@ final class TimerModel: ObservableObject {
 
     func setSeconds(_ seconds: Int) {
         effects.stopAlarm()
+        // A new time is always a focus session.
+        if isBreak && countdown.phase != .running && countdown.phase != .paused { setBreak(false) }
         now = AppClock.now()
         countdown.setSeconds(seconds, at: now)
         changed()
@@ -256,7 +272,7 @@ final class TimerModel: ObservableObject {
     func addMinutes(_ minutes: Int) {
         tick()
         guard countdown.phase != .running && countdown.phase != .paused else { return }
-        let base = countdown.phase == .finished ? countdown.configuredSeconds : seconds
+        let base = editableSeconds
         if minutes < 0 {
             // Taking time off never ends the timer: it stops at one minute.
             guard base > 60 else { return }
@@ -266,8 +282,24 @@ final class TimerModel: ObservableObject {
         }
     }
 
-    var canSubtract: Bool {
-        (countdown.phase == .finished ? countdown.configuredSeconds : seconds) > 60
+    func apply(_ set: TimerSet) {
+        setSeconds(set.seconds)
+        breakMinutes = set.breakMinutes
+        repeatEnabled = set.repeats
+    }
+
+    func saveSet(seconds: Int) {
+        let set = TimerSet(seconds: seconds, breakMinutes: breakMinutes, repeats: repeatEnabled)
+        guard seconds > 0, !savedSets.contains(where: { $0.sameSettings(as: set) }) else { return }
+        savedSets.append(set)
+    }
+
+    var canSubtract: Bool { editableSeconds > 60 }
+
+    /// The time the picker and the ± buttons start from; after a break, the focus time.
+    var editableSeconds: Int {
+        guard countdown.phase == .finished else { return seconds }
+        return isBreak ? workSeconds : countdown.configuredSeconds
     }
 
     private func changed(requestPermission: Bool = false) {
@@ -355,5 +387,31 @@ final class TimerModel: ObservableObject {
                 }
             }
         }
+    }
+}
+
+/// A saved combination of focus time, break and repeat.
+struct TimerSet: Codable, Hashable, Identifiable {
+    var id = UUID()
+    var seconds: Int
+    var breakMinutes: Int
+    var repeats: Bool
+
+    func sameSettings(as other: TimerSet) -> Bool {
+        seconds == other.seconds && breakMinutes == other.breakMinutes && repeats == other.repeats
+    }
+
+    /// "25+5", or "25:30" when the time has seconds.
+    var title: String {
+        let time = seconds % 60 == 0 ? "\(seconds / 60)" : String(format: "%d:%02d", seconds / 60, seconds % 60)
+        return breakMinutes > 0 ? "\(time)+\(breakMinutes)" : time
+    }
+
+    var accessibilityTitle: String {
+        var parts = [seconds % 60 == 0 ? String(localized: "\(seconds / 60)分")
+                                       : String(localized: "\(seconds / 60)分\(seconds % 60)秒")]
+        if breakMinutes > 0 { parts.append(String(localized: "休憩 \(breakMinutes)分")) }
+        if repeats { parts.append(String(localized: "くり返し")) }
+        return ListFormatter.localizedString(byJoining: parts)
     }
 }

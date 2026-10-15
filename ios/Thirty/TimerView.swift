@@ -34,6 +34,7 @@ struct TimerView: View {
     @AppStorage("plusInvitationShown") private var plusInvitationShown = false
     @State private var showSkins = false
     @State private var showSettings = false
+    @State private var showPlus = false
     /// Slats lit during the short fill-up that marks a start.
     @State private var ritualLit: Int?
     private static var launched = false
@@ -145,10 +146,9 @@ struct TimerView: View {
             }
         }
         .sheet(isPresented: $showTime) {
-            TimePickerView(seconds: model.countdown.phase == .finished ? model.countdown.configuredSeconds : model.seconds) {
-                model.setSeconds($0)
-            }
+            TimePickerView(model: model, store: store, seconds: model.editableSeconds)
         }
+        .sheet(isPresented: $showPlus) { PlusView(store: store) }
     }
 
     // MARK: Layouts
@@ -156,7 +156,7 @@ struct TimerView: View {
     private var portraitLayout: some View {
         VStack(spacing: 0) {
             topBar(landscape: false)
-            SlatBars(lit: ritualLit ?? model.bars, count: model.effectiveSlats, stacked: true)
+            meter(stacked: true)
                 .padding(.top, 12).padding(.bottom, 18)
             Rectangle().fill(skin.line).frame(height: 1.5)
             digits.frame(maxWidth: 560).padding(.top, 24)
@@ -169,7 +169,7 @@ struct TimerView: View {
         VStack(spacing: chromeHidden ? 0 : 4) {
             if !chromeHidden { topBar(landscape: true) }
             HStack(spacing: 24) {
-                SlatBars(lit: ritualLit ?? model.bars, count: model.effectiveSlats, stacked: false)
+                meter(stacked: false)
                 Rectangle().fill(skin.line).frame(width: 1.5)
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
@@ -182,6 +182,18 @@ struct TimerView: View {
                 }
                 .frame(width: max(240, size.width * 0.36))
             }
+        }
+    }
+
+    /// The slats, or during a break a cup of coffee that empties instead.
+    @ViewBuilder
+    private func meter(stacked: Bool) -> some View {
+        if model.isBreak {
+            CoffeeCup(level: model.cupLevel(levels: CoffeeCup.levels))
+                .padding(stacked ? 24 : 12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            SlatBars(lit: ritualLit ?? model.bars, count: model.effectiveSlats, stacked: stacked)
         }
     }
 
@@ -292,28 +304,47 @@ struct TimerView: View {
             .opacity(timing ? 0 : 1)
             .allowsHitTesting(!timing)
             .accessibilityHidden(timing)
-            HStack(spacing: 20) {
-                if model.countdown.phase != .ready {
-                    Button { lastTouch = Date(); model.reset(); showHint = false } label: {
-                        Image(systemName: "stop.fill").font(.system(size: 17))
-                            .frame(width: compact ? 48 : 56, height: compact ? 48 : 56)
-                            .background(skin.soft, in: Circle())
+            HStack(spacing: 0) {
+                RepeatButton(isOn: store.hasPlus && model.repeatEnabled, locked: !store.hasPlus, size: compact ? 44 : 56) {
+                    lastTouch = Date()
+                    if store.hasPlus { model.repeatEnabled.toggle() } else { showPlus = true }
+                }
+                Spacer(minLength: 0)
+                HStack(spacing: compact ? 10 : 14) {
+                    if model.countdown.phase != .ready {
+                        Button { lastTouch = Date(); model.reset(); showHint = false } label: {
+                            Image(systemName: "stop.fill").font(.system(size: 17))
+                                .frame(width: compact ? 48 : 56, height: compact ? 48 : 56)
+                                .background(skin.soft, in: Circle())
+                        }
+                        .buttonStyle(SoftPressStyle()).accessibilityLabel(String(localized: "終了"))
                     }
-                    .buttonStyle(SoftPressStyle()).accessibilityLabel(String(localized: "終了"))
+                    Button(action: primaryAction) {
+                        Image(systemName: model.countdown.phase == .running ? "pause.fill" : "play.fill")
+                            .font(.system(size: compact ? 24 : 28))
+                            .frame(width: compact ? 64 : 76, height: compact ? 64 : 76)
+                            .foregroundStyle(skin.lcd)
+                            .background(skin.ink, in: Circle())
+                    }
+                    .buttonStyle(SoftPressStyle())
+                    .accessibilityLabel(primaryLabel)
+                    .disabled(model.countdown.configuredSeconds == 0)
+                    .opacity(model.countdown.configuredSeconds == 0 ? 0.25 : 1)
+                    // Keeps play centred while the stop button is out.
+                    if model.countdown.phase != .ready && !compact {
+                        Color.clear.frame(width: 56, height: 1)
+                    }
                 }
-                Button(action: primaryAction) {
-                    Image(systemName: model.countdown.phase == .running ? "pause.fill" : "play.fill")
-                        .font(.system(size: compact ? 24 : 28))
-                        .frame(width: compact ? 64 : 76, height: compact ? 64 : 76)
-                        .foregroundStyle(skin.lcd)
-                        .background(skin.ink, in: Circle())
+                Spacer(minLength: 0)
+                BreakButton(minutes: model.breakMinutes, locked: !store.hasPlus, size: compact ? 44 : 56) {
+                    lastTouch = Date()
+                    showPlus = true
+                } onChange: {
+                    lastTouch = Date()
+                    model.breakMinutes = $0
                 }
-                .buttonStyle(SoftPressStyle())
-                .accessibilityLabel(primaryLabel)
-                .disabled(model.countdown.configuredSeconds == 0)
-                .opacity(model.countdown.configuredSeconds == 0 ? 0.25 : 1)
             }
-            .frame(minHeight: compact ? 64 : 76)
+            .frame(maxWidth: 400, minHeight: compact ? 64 : 76)
         }
         .opacity(chromeHidden ? 0 : 1)
         .allowsHitTesting(!chromeHidden)
@@ -545,24 +576,29 @@ struct UnevenRoundedCorners: Shape {
 }
 
 struct TimePickerView: View {
+    @ObservedObject var model: TimerModel
+    @ObservedObject var store: Store
     @State private var minutes: Int
     @State private var seconds: Int
-    let onSave: (Int) -> Void
+    @State private var showPlus = false
     @Environment(\.dismiss) private var dismiss
     private let presets = [5, 15, 25, 30, 45, 60, 90, 120]
+    private let maximumSets = 8
 
-    init(seconds: Int, onSave: @escaping (Int) -> Void) {
+    init(model: TimerModel, store: Store, seconds: Int) {
+        self.model = model
+        self.store = store
         _minutes = State(initialValue: seconds / 60)
         _seconds = State(initialValue: seconds % 60)
-        self.onSave = onSave
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 8) {
+                savedSets.padding(.top, 8)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
                     ForEach(presets, id: \.self) { preset in
-                        Button { onSave(preset * 60); dismiss() } label: {
+                        Button { model.setSeconds(preset * 60); dismiss() } label: {
                             Text("\(preset)").font(.headline.monospacedDigit())
                                 .frame(maxWidth: .infinity, minHeight: 44)
                                 .background(Color(uiColor: .secondarySystemGroupedBackground), in: Capsule())
@@ -589,13 +625,65 @@ struct TimePickerView: View {
                     Button { dismiss() } label: { Image(systemName: "xmark") }.accessibilityLabel(String(localized: "キャンセル"))
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { onSave(minutes * 60 + seconds); dismiss() } label: { Image(systemName: "checkmark") }
+                    Button { model.setSeconds(minutes * 60 + seconds); dismiss() } label: { Image(systemName: "checkmark") }
                         .accessibilityLabel(String(localized: "時間を決定"))
                 }
             }
             .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
+            .sheet(isPresented: $showPlus) { PlusView(store: store) }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    /// Thirty+: time, break and repeat saved together. Long press to delete.
+    private var savedSets: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
+                Text(String(localized: "マイセット"))
+                if !store.hasPlus { Image(systemName: "lock.fill").font(.caption2) }
+            }
+            .font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+            .padding(.horizontal, 20)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    if store.hasPlus {
+                        ForEach(model.savedSets) { set in
+                            Button { model.apply(set); dismiss() } label: { setLabel(set) }
+                                .buttonStyle(SoftPressStyle())
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        model.savedSets.removeAll { $0.id == set.id }
+                                    } label: { Label(String(localized: "削除"), systemImage: "trash") }
+                                }
+                                .accessibilityLabel(set.accessibilityTitle)
+                        }
+                    }
+                    if !store.hasPlus || model.savedSets.count < maximumSets {
+                        Button {
+                            if store.hasPlus { model.saveSet(seconds: minutes * 60 + seconds) } else { showPlus = true }
+                        } label: {
+                            Label(String(localized: "いまの設定を保存"), systemImage: "plus")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 14).frame(minHeight: 44)
+                                .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
+                        }
+                        .buttonStyle(SoftPressStyle())
+                        .accessibilityIdentifier("save-set")
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    private func setLabel(_ set: TimerSet) -> some View {
+        HStack(spacing: 5) {
+            Text(set.title).font(.headline.monospacedDigit())
+            if set.breakMinutes > 0 { CoffeeIcon(color: .primary).frame(width: 14, height: 11) }
+            if set.repeats { Image(systemName: "repeat").font(.caption.weight(.bold)) }
+        }
+        .padding(.horizontal, 14).frame(minHeight: 44)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: Capsule())
     }
 }
 

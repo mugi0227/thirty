@@ -147,6 +147,31 @@ final class ScreenshotTests: XCTestCase {
         }
     }
 
+    func testRepeatAndBreak() {
+        let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyNoPrompt", "YES", "-ThirtyPlusUnlocked", "YES",
+                          "-ThirtyDemoSeconds", "3", "-breakLength", "5", "-repeatEnabled", "YES"])
+        XCTAssertTrue(app.buttons["開始"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["repeat-button"].exists)
+        XCTAssertTrue(app.buttons["break-button"].exists)
+        sleep(1)
+        shot("20-repeat-break")
+
+        app.buttons["時間を変更"].tap()
+        XCTAssertTrue(app.buttons["save-set"].waitForExistence(timeout: 5))
+        app.buttons["save-set"].tap()
+        sleep(1)
+        shot("21-my-sets")
+        app.buttons["キャンセル"].tap()
+        sleep(1)
+
+        // Focus ends after the demo seconds and the break follows on its own.
+        app.buttons["開始"].tap()
+        sleep(6)
+        touchBars(app)
+        sleep(1)
+        shot("22-break")
+    }
+
     func testLiveActivity() {
         let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "amber"])
         XCTAssertTrue(app.buttons["開始"].waitForExistence(timeout: 10))
