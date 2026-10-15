@@ -17,6 +17,7 @@ on:
         default: true
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: release
   cancel-in-progress: false
@@ -29,6 +30,8 @@ jobs:
       BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
       - name: Check secrets
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -96,6 +99,32 @@ jobs:
               assert not entitlements.get("get-task-allow", False)
               assert entitlements.get("beta-reports-active") is True
           print("App and widget distribution entitlements verified")
+          PY
+      - name: Require the validated app source before upload
+        if: inputs.upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git diff --exit-code 2269bfe4b9b01ce8032aa3e4e766759d9654c9a7 HEAD -- ios
+          python3 -u - <<'PY'
+          import json, os, time, urllib.request
+          run_id = 38725348342
+          expected_sha = '2269bfe4b9b01ce8032aa3e4e766759d9654c9a7'
+          url = f'https://api.github.com/repos/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{run_id}'
+          for attempt in range(60):
+              request = urllib.request.Request(url, headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json'})
+              with urllib.request.urlopen(request) as response:
+                  result = json.load(response)
+              assert result['head_sha'] == expected_sha, 'Unexpected check source'
+              print('Required check:', result['status'], result['conclusion'], flush=True)
+              if result['status'] == 'completed':
+                  assert result['conclusion'] == 'success', 'Checks must pass before uploading'
+                  break
+              time.sleep(15)
+          else:
+              raise SystemExit('Timed out waiting for checks; nothing uploaded')
           PY
       - name: Export and upload
         working-directory: ios
