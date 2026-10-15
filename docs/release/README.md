@@ -72,7 +72,7 @@ CIの `iphone-duo` ジョブは、Duoに対応したランタイムが入って�
 
 - `ios/UITests/StoreScreenshotTests.swift` がSimulatorを操作して撮影します。時刻は9:41、Simulatorの言語は日本語、通知の許可は出さない設定です。
 - 計測中の画面は、開始直後に時計を進める（デバッグ版だけの `-ThirtyJumpAfterStart`）ことで、毎回同じくらいの残り時間で撮れます。
-- `scripts/make_store_screenshots.py` が見出しを付けます。書体は日本語の **Zen Kaku Gothic New**（`STORE_FONT=mincho` で **Zen Old Mincho**）。どちらもOFLで、`scripts/fetch_fonts.sh` が取得します。中国語用の書体に切り替わって字形が変わることはありません。
+- `scripts/make_store_screenshots.py` が見出しを付けます。書体は日本語の **Zen Kaku Gothic New**（`STORE_FONT=mincho` で **Zen Old Mincho**）。どちらもOFLで、ライセンスとともに `assets/store-fonts/` に同梱しています。`scripts/fetch_fonts.sh` はハッシュを確認して準備するだけなので、CDNの障害で撮影・編集が止まることはありません。中国語用の書体に切り替わって字形が変わることはありません。
 - 横向きの画面は、横長のストア画像（例：2622×1206）として出力します。
 - ロック画面は画面全体を撮影します。Dynamic Islandは設定アプリの上に出ている通常のコンパクト表示を別の画像にし、ホーム画面のアイコンが入らないようにしています。
 
@@ -81,3 +81,13 @@ CIの `iphone-duo` ジョブは、Duoに対応したランタイムが入って�
 [検証記録](preview-verification-20261013.md)に、使用したCIの録画と画像、動画の再生成手順、確認結果を記録しています。
 Dynamic Islandの場面では上端を固定して最大1.5倍まで拡大し、最後の0.5秒はその倍率を維持します。
 棒と残り時間を画面内に収めるため、拡大するのはこの場面だけです。
+
+## 最新の素材を掲載情報へ反映する
+
+1. `Build iOS` を最新ブランチで実行します。mainへのiOS・スクリプト変更でも実行されます。
+2. すべての撮影と編集が成功すると、画像・動画のサイズと形式を検証した `app-review-media` 成果物ができます。iPhoneは各9枚、iPadは8枚で、休憩カップとマイセットを含みます。`provenance.json` に元コミットと実行URLが入ります。
+3. 成果物をダウンロードして内容を確認します。
+4. `Fill App Store listing` の `media_run_id` に、その成功した `Build iOS` の実行IDを入力します。`media=true` で、新しく撮影した素材が使われます。空欄の場合は従来どおりリポジトリ内の素材を使います。
+5. `dry_run=true` で変更対象を確認し、その後 `dry_run=false` で掲載情報を保存します。`prepare_review` は価格・年齢制限・ビルド選択も更新するため、素材だけ更新する場合は `false` にします。
+
+このワークフローはApp Reviewへの提出を行いません。提出前に、最新のTestFlightビルドと実際に購入できるThirty+（`jp.mugilab.thirty.diagnostic`）が審査対象になっていることを確認します。

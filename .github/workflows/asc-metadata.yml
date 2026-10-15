@@ -5,6 +5,15 @@ name: Fill App Store listing
 on:
   workflow_dispatch:
     inputs:
+      draft_action:
+        description: Listing update, or inspect/reopen/finish the existing unsubmitted draft (never submits)
+        type: choice
+        options: [listing, inspect, reopen, finish]
+        default: listing
+      target_build:
+        description: Exact tested build number when finishing the draft
+        type: string
+        default: ''
       media_run_id:
         description: Successful Build iOS run containing the new app-review-media artifact (blank uses committed media)
         type: string
@@ -31,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Verify the selected media run
-        if: inputs.media && inputs.media_run_id != ''
+        if: inputs.draft_action == 'listing' && inputs.media && inputs.media_run_id != ''
         env:
           GH_TOKEN: ${{ github.token }}
           MEDIA_RUN_ID: ${{ inputs.media_run_id }}
@@ -49,14 +58,24 @@ jobs:
           rm -rf docs/release/store/iphone-medium docs/release/store/iphone-large docs/release/store/ipad-13
           rm -f docs/release/store/app-preview-iphone-6.9.mp4
       - uses: actions/download-artifact@v5
-        if: inputs.media && inputs.media_run_id != ''
+        if: inputs.draft_action == 'listing' && inputs.media && inputs.media_run_id != ''
         with:
           name: app-review-media
           path: docs/release/store
           run-id: ${{ inputs.media_run_id }}
           github-token: ${{ github.token }}
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
+      - name: Prepare only the unsubmitted draft
+        if: inputs.draft_action != 'listing'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          DRAFT_ACTION: ${{ inputs.draft_action }}
+          DRAFT_BUILD: ${{ inputs.target_build }}
+        run: python3 -u scripts/prepare_listing_draft.py "$DRAFT_ACTION" --build "$DRAFT_BUILD"
       - name: Update App Store Connect
+        if: inputs.draft_action == 'listing'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
