@@ -199,14 +199,20 @@ def main():
         client.post("/v1/inAppPurchaseLocalizations", payloads["/v1/inAppPurchaseLocalizations"])
     if not optional(client, f"/v2/inAppPurchases/{identifier}/inAppPurchaseAvailability"):
         client.post("/v1/inAppPurchaseAvailabilities", payloads["/v1/inAppPurchaseAvailabilities"])
-    if not optional(client, f"/v2/inAppPurchases/{identifier}/iapPriceSchedule"):
+    schedule = optional(client, f"/v2/inAppPurchases/{identifier}/iapPriceSchedule")
+    # Apple exposes a schedule resource even before the new product has prices.
+    # Its existence alone does not mean a price has been configured.
+    current_prices = prices(client, schedule["id"]) if schedule else {}
+    if not current_prices:
         client.post("/v1/inAppPurchasePriceSchedules", payloads["/v1/inAppPurchasePriceSchedules"])
+    elif {k: Decimal(v) for k, v in current_prices.items()} != {k: Decimal(v) for k, v in source_prices.items()}:
+        raise RuntimeError("Existing diagnostic prices differ; refusing to overwrite them")
     after = source_snapshot(client, identifier)
     actual_prices = prices(client, after["price_schedule_id"])
     if after["territories"] != before["territories"] or after["availableInNewTerritories"] != before["availableInNewTerritories"]:
         raise RuntimeError("Diagnostic availability does not match")
     if {k: Decimal(v) for k, v in actual_prices.items()} != {k: Decimal(v) for k, v in source_prices.items()}:
-        raise RuntimeError("Diagnostic prices do not match")
+        raise RuntimeError("Diagnostic prices do not match: " + json.dumps(actual_prices))
     if source_snapshot(client, source["id"]) != before or prices(client, before["price_schedule_id"]) != source_prices:
         raise RuntimeError("Reference changed during operation; inspect before testing")
     Path("diagnostic-iap-result.json").write_text(json.dumps({"diagnostic": after,
