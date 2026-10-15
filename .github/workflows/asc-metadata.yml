@@ -73,7 +73,7 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           DRAFT_ACTION: ${{ inputs.draft_action }}
           DRAFT_BUILD: ${{ inputs.target_build }}
-        run: python3 -u scripts/prepare_listing_draft.py "$DRAFT_ACTION" --build "$DRAFT_BUILD"
+        run: python3 -u scripts/prepare_listing_draft.py "$DRAFT_ACTION" --build "$DRAFT_BUILD" ${{ inputs.dry_run && '--dry-run' || '' }}
       - name: Update App Store Connect
         if: inputs.draft_action == 'listing'
         env:

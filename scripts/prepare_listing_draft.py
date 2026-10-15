@@ -25,8 +25,7 @@ def items(client, submission_id):
 
 
 def remove(client, item):
-    client.patch(f"/v1/reviewSubmissionItems/{item['id']}", {"data": {
-        "type": "reviewSubmissionItems", "id": item["id"], "attributes": {"removed": True}}})
+    client.delete(f"/v1/reviewSubmissionItems/{item['id']}")
 
 
 def add(client, submission_id, name, kind, identifier):
@@ -65,9 +64,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=["inspect", "reopen", "finish"])
     parser.add_argument("--build", default="")
+    parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     config = json.loads((ROOT / "release/metadata-ja.json").read_text())
-    client = Client(False)
+    client = Client(args.dry_run)
     app = client.get("/v1/apps", **{"filter[bundleId]": config["bundle_id"]})["data"][0]
     versions = client.get(f"/v1/apps/{app['id']}/appStoreVersions", **{"filter[platform]": "IOS", "limit": 10})["data"]
     version = next(x for x in versions if x["attributes"]["versionString"] == "1.0")
@@ -92,6 +92,9 @@ def main():
         matches = [x for x in current if linked(x, "appStoreVersion") == version["id"]]
         if len(matches) != 1:
             raise RuntimeError("Cannot identify this app version's draft item; nothing changed")
+        if args.dry_run:
+            print("[dry-run] Would remove this app version's item from the unsubmitted draft:", matches[0]["id"])
+            return
         remove(client, matches[0])
         updated = client.get(f"/v1/appStoreVersions/{version['id']}")["data"]
         if updated["attributes"]["appStoreState"] != "PREPARE_FOR_SUBMISSION":
@@ -129,6 +132,11 @@ def main():
     purchase_version = candidates[0]
     legacy_purchase = next(x for x in purchases if x["attributes"]["productId"] == legacy)
     legacy_ids = {x["id"] for x in client.get(f"/v2/inAppPurchases/{legacy_purchase['id']}/versions", limit=200)["data"]}
+    if args.dry_run:
+        print(json.dumps({"dry_run": True, "select_build": args.build, "select_product": sku,
+                          "remove_legacy_product_from_draft": legacy, "add_app_version_to_draft": version["id"],
+                          "submit": False}, ensure_ascii=False))
+        return
     client.patch(f"/v1/appStoreVersions/{version['id']}/relationships/build", {"data": {"type": "builds", "id": build["id"]}})
     if not any(linked(x, "inAppPurchaseVersion") == purchase_version["id"] for x in current):
         add(client, draft["id"], "inAppPurchaseVersion", "inAppPurchaseVersions", purchase_version["id"])
