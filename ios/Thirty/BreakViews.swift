@@ -97,6 +97,8 @@ struct SegmentText: View {
             ForEach(Array(text.enumerated()), id: \.offset) { _, character in
                 glyph(character).fill(skin.ink)
                     .frame(width: height * 0.55, height: height)
+                    // A one only lights its right edge; drop the empty left so "+1" sits together.
+                    .frame(width: character == "1" ? height * 0.12 : height * 0.55, alignment: .trailing)
             }
         }
         .accessibilityHidden(true)
