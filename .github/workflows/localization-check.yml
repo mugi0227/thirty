@@ -11,9 +11,17 @@ concurrency:
   cancel-in-progress: true
 jobs:
   check:
-    runs-on: macos-15
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device: iPhone 17
+            slug: iphone
+          - device: iPad Pro 13-inch (M5)
+            slug: ipad
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      DEVICE_NAME: ${{ matrix.device }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -38,13 +46,13 @@ jobs:
           xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
             -destination 'generic/platform=iOS Simulator' -derivedDataPath ../build-sim \
             CODE_SIGNING_ALLOWED=NO build-for-testing -quiet
-      - name: Verify both languages on iPhone and iPad
+      - name: Verify both languages on ${{ matrix.device }}
         working-directory: ios
         run: |
           set -eo pipefail
           mkdir -p ../localization-screenshots
-          for device in 'iPhone 17' 'iPad Pro 13-inch (M5)'; do
-            udid=$(python3 ../scripts/ci/boot_localization_sim.py "$device" | tail -1)
+          for device in "$DEVICE_NAME"; do
+            udid=$(THIRTY_SIM_RUNTIME=latest python3 ../scripts/ci/boot_localization_sim.py "$device" | tail -1)
             slug=$(echo "$device" | tr -cs '[:alnum:]' '-')
             mkdir -p "../localization-screenshots/$slug"
             TEST_RUNNER_SCREENSHOT_DIR="$PWD/../localization-screenshots/$slug" \
@@ -62,7 +70,7 @@ jobs:
       - uses: actions/upload-artifact@v5
         if: always()
         with:
-          name: Thirty-localization-verification
+          name: Thirty-localization-verification-${{ matrix.slug }}
           path: |
             localization-screenshots/
             localization-*.log

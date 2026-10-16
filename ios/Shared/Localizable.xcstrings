@@ -2703,6 +2703,125 @@
           }
         }
       }
+    },
+    "いつもの組み合わせを保存": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "いつもの組み合わせを保存"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save your usual setup"
+          }
+        }
+      }
+    },
+    "時間・休憩・くり返しをマイセットに。次からは、選ぶだけ。": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時間・休憩・くり返しをマイセットに。次からは、選ぶだけ。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save your duration, break, and repeat settings to My sets. Next time, just choose a set."
+          }
+        }
+      }
+    },
+    "集中と休憩を、自動でくり返す": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "集中と休憩を、自動でくり返す"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repeat focus sessions and breaks"
+          }
+        }
+      }
+    },
+    "25分集中→5分休憩など、好きな組み合わせで。休憩は1分刻み。休憩なしのくり返しも。": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "25分集中→5分休憩など、好きな組み合わせで。休憩は1分刻み。休憩なしのくり返しも。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose your own focus and break durations, such as 25 + 5 minutes. Set breaks in one-minute steps, or repeat without a break."
+          }
+        }
+      }
+    },
+    "ロック画面やDynamic Islandで、棒と残り時間を確認。充電中の横置き（StandBy）にも。": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロック画面やDynamic Islandで、棒と残り時間を確認。充電中の横置き（StandBy）にも。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See the bars and remaining time on the Lock Screen and Dynamic Island, or in StandBy while charging in landscape."
+          }
+        }
+      }
+    },
+    "見た目も、音も、自分好みに": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見た目も、音も、自分好みに"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose your look and end sound"
+          }
+        }
+      }
+    },
+    "5種類の追加スキンとアイコン、選べる終了音。棒の本数や秒の表示も変更できます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5種類の追加スキンとアイコン、選べる終了音。棒の本数や秒の表示も変更できます。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Five extra skins and matching icons, plus a choice of end sounds. Adjust the number of bars and show or hide seconds."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
