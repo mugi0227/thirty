@@ -919,19 +919,19 @@
         }
       }
     },
-    "タイマーは無料のまま、広告もありません。\n気に入ったら、買い切りでどうぞ。": {
+    "時間・休憩・くり返しを保存。\nアプリを閉じても、残り時間を確認できます。": {
       "extractionState": "manual",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "タイマーは無料のまま、広告もありません。\n気に入ったら、買い切りでどうぞ。"
+            "value": "時間・休憩・くり返しを保存。\nアプリを閉じても、残り時間を確認できます。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The timer stays free, with no ads.\nAdd more options with a one-time purchase."
+            "value": "Save your timer duration, break, and repeat settings.\nCheck the remaining time even when the app is closed."
           }
         }
       }
@@ -2160,19 +2160,19 @@
         }
       }
     },
-    "買い切りです。定期購入ではありません。": {
+    "買い切り商品です。": {
       "extractionState": "manual",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "買い切りです。定期購入ではありません。"
+            "value": "買い切り商品です。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "One-time purchase. No subscription."
+            "value": "One-time purchase."
           }
         }
       }

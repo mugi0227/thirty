@@ -63,13 +63,17 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(app.navigationBars[settings].waitForExistence(timeout: 5))
         XCTAssertTrue(app.switches[english ? "Start when opened" : "開いたらすぐスタート"].exists)
         shot(language + "-07-settings")
-        app.buttons[english ? "Explore Thirty+" : "Thirty+ でできること"].tap()
+        // StoreKit may append the localized price to the row's combined label.
+        let explorePlus = app.buttons.matching(NSPredicate(
+            format: "label BEGINSWITH %@", english ? "Explore Thirty+" : "Thirty+ でできること")).firstMatch
+        XCTAssertTrue(explorePlus.waitForExistence(timeout: 5))
+        explorePlus.tap()
         XCTAssertTrue(app.buttons["close-plus"].waitForExistence(timeout: 5))
         shot(language + "-08-plus-top")
         app.swipeUp()
         app.swipeUp()
         XCTAssertTrue(app.buttons[english ? "Restore purchases" : "購入を復元"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts[english ? "One-time purchase. No subscription." : "買い切りです。定期購入ではありません。"].exists)
+        XCTAssertTrue(app.staticTexts[english ? "One-time purchase." : "買い切り商品です。"].exists)
         shot(language + "-09-plus-purchase")
         app.buttons["close-plus"].tap()
         app.swipeUp()
