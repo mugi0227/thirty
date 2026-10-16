@@ -6,12 +6,16 @@ on:
   workflow_dispatch:
     inputs:
       draft_action:
-        description: Listing update, or inspect/reopen/finish the existing unsubmitted draft (never submits)
+        description: Update listing/draft, or explicitly submit the selected review draft
         type: choice
-        options: [listing, inspect, reopen, finish]
+        options: [listing, inspect, reopen, finish, submit]
         default: listing
       target_build:
-        description: Exact tested build number when finishing the draft
+        description: Exact approved build number when finishing or submitting
+        type: string
+        default: ''
+      submission_id:
+        description: Exact approved review draft ID (required only for submit)
         type: string
         default: ''
       media_run_id:
@@ -66,7 +70,7 @@ jobs:
           github-token: ${{ github.token }}
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
       - name: Prepare only the unsubmitted draft
-        if: inputs.draft_action != 'listing'
+        if: inputs.draft_action != 'listing' && inputs.draft_action != 'submit'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -74,6 +78,21 @@ jobs:
           DRAFT_ACTION: ${{ inputs.draft_action }}
           DRAFT_BUILD: ${{ inputs.target_build }}
         run: python3 -u scripts/prepare_listing_draft.py "$DRAFT_ACTION" --build "$DRAFT_BUILD" ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: Submit the explicitly approved review draft
+        if: inputs.draft_action == 'submit'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          APPROVED_BUILD: ${{ inputs.target_build }}
+          APPROVED_SUBMISSION: ${{ inputs.submission_id }}
+        run: python3 -u scripts/submit_app_review.py --build "$APPROVED_BUILD" --submission "$APPROVED_SUBMISSION" ${{ inputs.dry_run && '--dry-run' || '' }}
+      - uses: actions/upload-artifact@v5
+        if: always() && inputs.draft_action == 'submit'
+        with:
+          name: app-review-submission
+          path: app-review-submission.json
+          retention-days: 30
       - name: Update App Store Connect
         if: inputs.draft_action == 'listing'
         env:
