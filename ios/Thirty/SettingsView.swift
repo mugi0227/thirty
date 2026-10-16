@@ -156,12 +156,10 @@ struct PlusView: View {
     @ObservedObject var store: Store
     @Environment(\.dismiss) private var dismiss
     private let perks: [(String, String, String)] = [
-        ("paintpalette", String(localized: "スキン"), String(localized: "アンバー、ナイトブルー、ルビーなど5種類")),
-        ("lock.iphone", String(localized: "閉じても、残りが見える"), String(localized: "ほかのアプリやロック画面でも、画面上部の黒い部分（Dynamic Island）やロック画面に、減っていく棒と残り時間が出ます。充電中に横置きすると置き時計にも（StandBy）")),
-        ("bell", String(localized: "終了音"), String(localized: "キッチンタイマーのピピピ、ベル、やさしい音、振動のみ")),
-        ("repeat", String(localized: "くり返しと休憩"), String(localized: "25分→休憩5分→25分…を自動で。よく使う組み合わせはマイセットに保存")),
-        ("app.badge", String(localized: "アプリのアイコン"), String(localized: "スキンに合わせた5種類")),
-        ("slider.horizontal.3", String(localized: "表示の細かい設定"), String(localized: "棒を60本に、分だけの表示に")),
+        ("bookmark", String(localized: "いつもの組み合わせを保存"), String(localized: "時間・休憩・くり返しをマイセットに。次からは、選ぶだけ。")),
+        ("repeat", String(localized: "集中と休憩を、自動でくり返す"), String(localized: "25分集中→5分休憩など、好きな組み合わせで。休憩は1分刻み。休憩なしのくり返しも。")),
+        ("lock.iphone", String(localized: "閉じても、残りが見える"), String(localized: "ロック画面やDynamic Islandで、棒と残り時間を確認。充電中の横置き（StandBy）にも。")),
+        ("paintpalette", String(localized: "見た目も、音も、自分好みに"), String(localized: "5種類の追加スキンとアイコン、選べる終了音。棒の本数や秒の表示も変更できます。")),
     ]
 
     var body: some View {

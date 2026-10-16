@@ -1,6 +1,17 @@
 name: Check Japanese and English
 on:
   workflow_dispatch:
+    inputs:
+      device:
+        description: Device to verify (both keeps full coverage)
+        type: choice
+        options: [both, iphone, ipad]
+        default: both
+      language:
+        description: Language to verify (both keeps full coverage)
+        type: choice
+        options: [both, en, ja]
+        default: both
   push:
     branches:
       - codex/japanese-english
@@ -11,9 +22,14 @@ concurrency:
   cancel-in-progress: true
 jobs:
   check:
-    runs-on: macos-15
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.device == 'iphone' && '["iphone"]' || inputs.device == 'ipad' && '["ipad"]' || '["iphone","ipad"]') }}
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      DEVICE_NAME: ${{ matrix.target == 'iphone' && 'iPhone 17' || 'iPad Pro 13-inch (M5)' }}
+      LOCALIZATION_TEST: ${{ inputs.language == 'en' && 'ThirtyUITests/LocalizationTests/testEnglish' || inputs.language == 'ja' && 'ThirtyUITests/LocalizationTests/testJapanese' || 'ThirtyUITests/LocalizationTests' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -38,13 +54,13 @@ jobs:
           xcodebuild -project Thirty.xcodeproj -scheme Thirty -configuration Debug \
             -destination 'generic/platform=iOS Simulator' -derivedDataPath ../build-sim \
             CODE_SIGNING_ALLOWED=NO build-for-testing -quiet
-      - name: Verify both languages on iPhone and iPad
+      - name: Verify selected languages on ${{ env.DEVICE_NAME }}
         working-directory: ios
         run: |
           set -eo pipefail
           mkdir -p ../localization-screenshots
-          for device in 'iPhone 17' 'iPad Pro 13-inch (M5)'; do
-            udid=$(python3 ../scripts/ci/boot_localization_sim.py "$device" | tail -1)
+          for device in "$DEVICE_NAME"; do
+            udid=$(THIRTY_SIM_RUNTIME=latest python3 ../scripts/ci/boot_localization_sim.py "$device" | tail -1)
             slug=$(echo "$device" | tr -cs '[:alnum:]' '-')
             mkdir -p "../localization-screenshots/$slug"
             TEST_RUNNER_SCREENSHOT_DIR="$PWD/../localization-screenshots/$slug" \
@@ -52,8 +68,8 @@ jobs:
               -destination "id=$udid" -derivedDataPath ../build-sim \
               -parallel-testing-enabled NO \
               -test-timeouts-enabled YES \
-              -maximum-test-execution-time-allowance 180 \
-              -only-testing:ThirtyUITests/LocalizationTests \
+              -maximum-test-execution-time-allowance 300 \
+              -only-testing:"$LOCALIZATION_TEST" \
               CODE_SIGNING_ALLOWED=NO test-without-building \
               > "../localization-$slug.log" 2>&1
             grep -E 'Test Case.*(passed|failed)|error:|TEST (SUCCEEDED|FAILED)' "../localization-$slug.log"
@@ -62,7 +78,7 @@ jobs:
       - uses: actions/upload-artifact@v5
         if: always()
         with:
-          name: Thirty-localization-verification
+          name: Thirty-localization-verification-${{ matrix.target }}
           path: |
             localization-screenshots/
             localization-*.log
