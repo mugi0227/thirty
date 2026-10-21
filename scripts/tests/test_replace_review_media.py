@@ -1,11 +1,13 @@
 import copy
+import hashlib
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from replace_review_media import PURCHASE_VERSION, cancel_once, restore_items, upload_media, validate_partial, validate_target
+from replace_review_media import PURCHASE_VERSION, cancel_once, restore_items, retry_pending_screenshot, upload_media, validate_partial, validate_target
 
 
 def item(kind, identifier):
@@ -116,6 +118,48 @@ class GuardTests(unittest.TestCase):
         upload_media(client, {"id": "version", "attributes": {"appStoreState": "DEVELOPER_REJECTED"}},
                      config, replace)
         replace.assert_called_once_with(client, "japanese", config)
+
+    def retry_fixture(self, root, state):
+        (root / "shots").mkdir()
+        (root / "shots/02-landscape.png").write_bytes(b"approved screenshot")
+        config = {"locale": "ja", "screenshots": {"phone": "shots"}}
+        pending = {"id": "old", "display": "phone", "file": "02-landscape.png", "state": "UPLOAD_COMPLETE"}
+        client, upload = Mock(), Mock(return_value="new")
+        client.get.side_effect = [
+            {"data": [{"id": "ja", "attributes": {"locale": "ja"}}]},
+            {"data": [{"id": "set", "attributes": {"screenshotDisplayType": "phone"}}]},
+            {"data": [{"id": "first"}, {"id": "old"}, {"id": "last"}]},
+            {"data": {"attributes": {"assetDeliveryState": {"state": state}, "fileSize": 19,
+                                     "sourceFileChecksum": hashlib.md5(b"approved screenshot").hexdigest()}}},
+        ]
+        return client, upload, config, pending
+
+    def test_retry_keeps_original_until_verified_and_preserves_display_order(self):
+        with tempfile.TemporaryDirectory() as folder, patch("replace_review_media.ROOT", Path(folder)):
+            client, upload, config, pending = self.retry_fixture(Path(folder), "COMPLETE")
+            self.assertEqual(retry_pending_screenshot(client,
+                             {"id": "version", "attributes": {"appStoreState": "DEVELOPER_REJECTED"}},
+                             config, pending, upload), "new")
+        client.delete.assert_called_once_with("/v1/appScreenshots/old")
+        self.assertLess(client.mock_calls.index(unittest.mock.call.get("/v1/appScreenshots/new")),
+                        client.mock_calls.index(unittest.mock.call.delete("/v1/appScreenshots/old")))
+        self.assertEqual([x["id"] for x in client.patch.call_args.args[1]["data"]], ["first", "new", "last"])
+
+    def test_failed_retry_removes_only_the_new_asset(self):
+        with tempfile.TemporaryDirectory() as folder, patch("replace_review_media.ROOT", Path(folder)):
+            client, upload, config, pending = self.retry_fixture(Path(folder), "FAILED")
+            with self.assertRaises(RuntimeError):
+                retry_pending_screenshot(client,
+                    {"id": "version", "attributes": {"appStoreState": "DEVELOPER_REJECTED"}}, config, pending, upload)
+        client.delete.assert_called_once_with("/v1/appScreenshots/new")
+        client.patch.assert_not_called()
+
+    def test_retry_cannot_change_an_active_review(self):
+        client, upload = Mock(), Mock()
+        with self.assertRaises(RuntimeError):
+            retry_pending_screenshot(client, {"attributes": {"appStoreState": "WAITING_FOR_REVIEW"}}, {}, {}, upload)
+        upload.assert_not_called()
+        client.get.assert_not_called()
 
 
 if __name__ == "__main__":

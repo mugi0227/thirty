@@ -178,12 +178,50 @@ def upload_media(client, version, config, replace):
     replace(client, matches[0]["id"], config)
 
 
+def retry_pending_screenshot(client, version, config, pending, upload):
+    require(version["attributes"]["appStoreState"] in EDITABLE, "The version is not editable")
+    require(pending["display"] in config["screenshots"] and pending["state"] == "UPLOAD_COMPLETE",
+            "Only a pending screenshot can be retried")
+    locales = client.get(f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations")["data"]
+    locale = next(v for v in locales if v["attributes"]["locale"] == config["locale"])
+    sets = client.get(f"/v1/appStoreVersionLocalizations/{locale['id']}/appScreenshotSets")["data"]
+    media_set = next(s for s in sets if s["attributes"]["screenshotDisplayType"] == pending["display"])
+    originals = client.get(f"/v1/appScreenshotSets/{media_set['id']}/appScreenshots")["data"]
+    require(len(originals) < 10 and any(x["id"] == pending["id"] for x in originals),
+            "The pending screenshot selection changed")
+    path = ROOT / config["screenshots"][pending["display"]] / pending["file"]
+    new_id = upload(client, "appScreenshots", "appScreenshotSets", media_set["id"], path, {})
+    can_cleanup = True
+    try:
+        for _ in range(24):
+            attributes = client.get(f"/v1/appScreenshots/{new_id}")["data"]["attributes"]
+            state = delivery_state(attributes)
+            if state == "COMPLETE":
+                require(attributes["fileSize"] == path.stat().st_size and
+                        attributes.get("sourceFileChecksum", "").lower() == hashlib.md5(path.read_bytes()).hexdigest(),
+                        "The replacement screenshot does not match the approved file")
+                # Keep the original until the replacement is processed and verified.
+                can_cleanup = False
+                client.delete(f"/v1/appScreenshots/{pending['id']}")
+                client.patch(f"/v1/appScreenshotSets/{media_set['id']}/relationships/appScreenshots", {"data": [
+                    {"type": "appScreenshots", "id": new_id if x["id"] == pending["id"] else x["id"]}
+                    for x in originals]})
+                return new_id
+            require(state != "FAILED", "The replacement screenshot failed processing")
+            time.sleep(5)
+        raise RuntimeError("The replacement screenshot is still pending; the original is retained")
+    except Exception:
+        if can_cleanup:
+            client.delete(f"/v1/appScreenshots/{new_id}")
+        raise
+
+
 def main():
-    from asc_metadata import Client, check_media_files, replace_media
+    from asc_metadata import Client, check_media_files, replace_media, upload
     from prepare_listing_draft import wait_for_media
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["withdraw", "upload", "restore", "verify", "status"])
+    parser.add_argument("action", choices=["withdraw", "upload", "restore", "verify", "status", "retry-screenshot"])
     parser.add_argument("--build", required=True)
     parser.add_argument("--submission", required=True)
     parser.add_argument("--dry-run", action="store_true")
@@ -226,6 +264,18 @@ def main():
                 require(draft["attributes"]["state"] == "READY_FOR_REVIEW" and
                         not draft["attributes"].get("submittedDate"), "The restored draft is not ready and unsubmitted")
                 report.update({"submission_id": draft_id, "submission_state": "READY_FOR_REVIEW", "submitted": False})
+        elif args.action == "retry-screenshot":
+            require(version["attributes"]["appStoreState"] in EDITABLE, "The version is not editable")
+            report["media"] = verify_media(client, version["id"], config, require_complete=False)
+            pending = [m for m in report["media"] if m["state"] != "COMPLETE"]
+            require(len(pending) <= 1, "Expected at most one pending screenshot")
+            if pending:
+                require(pending[0]["display"] in config["screenshots"] and pending[0]["state"] == "UPLOAD_COMPLETE",
+                        "Only a pending screenshot can be retried")
+                report["retry"] = pending[0]
+                if not args.dry_run:
+                    report["replacement_id"] = retry_pending_screenshot(client, version, config, pending[0], upload)
+                    report["media"] = verify_media(client, version["id"], config)
         elif args.action == "status":
             # Read processing details even while the old submission is canceled
             # or a new preview is pending. Never writes or restores a draft.
