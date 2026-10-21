@@ -9,6 +9,7 @@ import json
 import time
 from pathlib import Path
 
+from media_state import delivery_state
 from submit_app_review import require, validate_selection
 
 APP_ID = "6822135223"
@@ -154,7 +155,8 @@ def verify_media(client, version_id, config):
             for item in remote:
                 attributes = item["attributes"]
                 path = local[attributes["fileName"]]
-                require(attributes.get("assetDeliveryState", {}).get("state") == "COMPLETE",
+                state = delivery_state(attributes, video=assets == "appPreviews")
+                require(state == "COMPLETE",
                         f"{display}/{path.name}: media is not processed")
                 require(attributes["fileSize"] == path.stat().st_size, f"{path.name}: file size differs")
                 checksum = attributes.get("sourceFileChecksum")

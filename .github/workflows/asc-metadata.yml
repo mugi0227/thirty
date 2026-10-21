@@ -1,6 +1,6 @@
 name: Fill App Store listing
-# Writes the listing text and uploads screenshots and the app preview to App
-# Store Connect from release/metadata-ja.json. Runs on Linux; no Mac needed.
+# Updates the listing/media or explicitly manages the selected review submission
+# in App Store Connect. Runs on Linux; no Mac needed.
 # Uses the same secrets as "Upload to App Store Connect".
 on:
   workflow_dispatch:
@@ -11,11 +11,11 @@ on:
         options: [listing, inspect, reopen, finish, submit, withdraw, upload, restore, verify]
         default: listing
       target_build:
-        description: Exact approved build number when finishing or submitting
+        description: Exact approved build number for draft/review operations
         type: string
         default: ''
       submission_id:
-        description: Exact approved review draft ID (required only for submit)
+        description: Exact approved submission ID (required for submit/withdraw/upload/restore/verify)
         type: string
         default: ''
       media_run_id:
