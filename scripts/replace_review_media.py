@@ -133,7 +133,7 @@ def restore_items(client, version_id, submissions):
     return draft["id"]
 
 
-def verify_media(client, version_id, config):
+def verify_media(client, version_id, config, *, require_complete=True):
     locales = client.get(f"/v1/appStoreVersions/{version_id}/appStoreVersionLocalizations")["data"]
     matches = [v for v in locales if v["attributes"]["locale"] == config["locale"]]
     require(len(matches) == 1, "Expected the approved Japanese localization")
@@ -156,14 +156,16 @@ def verify_media(client, version_id, config):
                 attributes = item["attributes"]
                 path = local[attributes["fileName"]]
                 state = delivery_state(attributes, video=assets == "appPreviews")
-                require(state == "COMPLETE",
-                        f"{display}/{path.name}: media is not processed")
+                if require_complete:
+                    require(state == "COMPLETE", f"{display}/{path.name}: media is not processed")
                 require(attributes["fileSize"] == path.stat().st_size, f"{path.name}: file size differs")
                 checksum = attributes.get("sourceFileChecksum")
                 if checksum:
                     require(checksum.lower() == hashlib.md5(path.read_bytes()).hexdigest(), f"{path.name}: checksum differs")
                 report.append({"display": display, "file": path.name, "id": item["id"],
-                               "state": "COMPLETE", "checksum_verified": bool(checksum)})
+                               "state": state, "checksum_verified": bool(checksum),
+                               "asset_delivery": attributes.get("assetDeliveryState"),
+                               "video_delivery": attributes.get("videoDeliveryState")})
     require(len(report) == 27, "Expected exactly the approved 26 screenshots and one preview")
     return report
 
@@ -181,7 +183,7 @@ def main():
     from prepare_listing_draft import wait_for_media
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["withdraw", "upload", "restore", "verify"])
+    parser.add_argument("action", choices=["withdraw", "upload", "restore", "verify", "status"])
     parser.add_argument("--build", required=True)
     parser.add_argument("--submission", required=True)
     parser.add_argument("--dry-run", action="store_true")
@@ -224,6 +226,10 @@ def main():
                 require(draft["attributes"]["state"] == "READY_FOR_REVIEW" and
                         not draft["attributes"].get("submittedDate"), "The restored draft is not ready and unsubmitted")
                 report.update({"submission_id": draft_id, "submission_state": "READY_FOR_REVIEW", "submitted": False})
+        elif args.action == "status":
+            # Read processing details even while the old submission is canceled
+            # or a new preview is pending. Never writes or restores a draft.
+            report["media"] = verify_media(client, version["id"], config, require_complete=False)
         else:
             validate_target(build, args.build, items(client, selected["id"]), version["id"])
             report["media"] = verify_media(client, version["id"], config)
