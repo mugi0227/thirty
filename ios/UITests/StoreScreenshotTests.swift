@@ -145,12 +145,14 @@ final class StoreScreenshotTests: XCTestCase {
 
     func test5PlusFeature() {
         if isPad {
-            let app = launch(["-onboardingSeen.v3", "YES"])
+            // Photograph the purchased gallery so the listing contains no
+            // storefront-specific price or purchase button (Guideline 2.3.7).
+            let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "amber"])
             XCTAssertTrue(app.buttons["スキン"].waitForExistence(timeout: 10))
             app.buttons["スキン"].tap()
-            sleep(2)
-            app.buttons["アンバー"].tap()
-            sleep(2)
+            XCTAssertTrue(app.staticTexts["Thirty+ をご利用いただき、ありがとうございます。"].waitForExistence(timeout: 10))
+            XCTAssertFalse(app.buttons["購入を復元"].exists)
+            sleep(1)
             shot("06-skins")
         } else {
             let app = launch(["-onboardingSeen.v3", "YES", "-ThirtyPlusUnlocked", "YES", "-skin", "amber", "-ThirtyJumpAfterStart", "450"])
