@@ -3,12 +3,14 @@
 2026年10月12日時点のAppleの要件を確認して作成したチェックリストです。
 自動で用意できるもの（スクリーンショット、プレビュー動画、文章）と、Apple Developerアカウントで本人が行う手続きを分けています。
 
+2026年10月21日に、掲載素材の価格表現を修正しました。[修正・検証記録](media-update-20261021.md)を参照してください。Apple側は同日の確認時点でビルド22が審査待ちで、この素材修正では取り下げ・再提出は行っていません。
+
 ## 自動で用意しているもの
 
 | もの | 場所 | 状態 |
 | --- | --- | --- |
 | App Storeのスクリーンショット（キャプション付き） | [store/iphone-medium](store/iphone-medium/)（1206×2622、必須）、[store/iphone-large](store/iphone-large/)（1320×2868）、[store/ipad-13](store/ipad-13/)（2064×2752、必須）。CIの成果物 `store-*` からも取得可 | 撮影済み |
-| App プレビュー動画（886×1920、30fps、H.264、約23.6秒。デバッグ版の早送り録画に見出し、Dynamic Islandの拡大、音を追加） | [store/app-preview-iphone-6.9.mp4](store/app-preview-iphone-6.9.mp4) | 編集済み |
+| App プレビュー動画（886×1920、30fps、H.264、約24.15秒。デバッグ版の早送り録画に見出し、Dynamic Islandの拡大、音を追加） | [store/app-preview-iphone-6.9.mp4](store/app-preview-iphone-6.9.mp4) | 編集済み |
 | 説明文、キーワード、サブタイトルなど | [metadata-ja.md](metadata-ja.md) | 下書き済み |
 | プライバシーポリシー | [site/privacy-policy.md](../../site/privacy-policy.md)（公開先と手順は [site/README.md](../../site/README.md)） | 下書き済み |
 | サポートページ | [site/support.md](../../site/support.md)（公開先と手順は [site/README.md](../../site/README.md)） | 下書き済み |
@@ -73,6 +75,7 @@ CIの `iphone-duo` ジョブは、Duoに対応したランタイムが入って�
 - `ios/UITests/StoreScreenshotTests.swift` がSimulatorを操作して撮影します。時刻は9:41、Simulatorの言語は日本語、通知の許可は出さない設定です。
 - 計測中の画面は、開始直後に時計を進める（デバッグ版だけの `-ThirtyJumpAfterStart`）ことで、毎回同じくらいの残り時間で撮れます。
 - `scripts/make_store_screenshots.py` が見出しを付けます。書体は日本語の **Zen Kaku Gothic New**（`STORE_FONT=mincho` で **Zen Old Mincho**）。どちらもOFLで、ライセンスとともに `assets/store-fonts/` に同梱しています。`scripts/fetch_fonts.sh` はハッシュを確認して準備するだけなので、CDNの障害で撮影・編集が止まることはありません。中国語用の書体に切り替わって字形が変わることはありません。
+- ストア用の画像・動画には「無料」や具体的な価格を入れません（[App Reviewガイドライン2.3.7](https://developer.apple.com/jp/app-store/review/guidelines/)）。iPadのスキン一覧はThirty+購入済みの画面で撮影し、購入価格が写るのを防ぎます。有料機能の見出しには「Thirty+」を残します。動画末尾は「広告なし・登録不要」です。
 - 横向きの画面は、横長のストア画像（例：2622×1206）として出力します。
 - ロック画面は画面全体を撮影します。Dynamic Islandは設定アプリの上に出ている通常のコンパクト表示を別の画像にし、ホーム画面のアイコンが入らないようにしています。
 

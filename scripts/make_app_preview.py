@@ -164,7 +164,7 @@ def end_card(t):
     draw = ImageDraw.Draw(layer)
     draw.text((W / 2, 960), "Thirty", font=font("bold", 96), fill=INK, anchor="mt")
     draw.text((W / 2, 1110), "とりあえず、30分！", font=font("bold", 56), fill=INK, anchor="mt")
-    draw.text((W / 2, 1220), "無料・広告なし", font=font("regular", 36), fill=SUB, anchor="mt")
+    draw.text((W / 2, 1220), "広告なし・登録不要", font=font("regular", 36), fill=SUB, anchor="mt")
     faded = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     faded = Image.blend(faded, layer, k)
     canvas.alpha_composite(faded)
