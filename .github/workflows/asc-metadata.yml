@@ -8,7 +8,7 @@ on:
       draft_action:
         description: Update listing/draft, or explicitly submit the selected review draft
         type: choice
-        options: [listing, inspect, reopen, finish, submit, withdraw, restore, verify]
+        options: [listing, inspect, reopen, finish, submit, withdraw, upload, restore, verify]
         default: listing
       target_build:
         description: Exact approved build number when finishing or submitting
@@ -79,7 +79,7 @@ jobs:
           DRAFT_BUILD: ${{ inputs.target_build }}
         run: python3 -u scripts/prepare_listing_draft.py "$DRAFT_ACTION" --build "$DRAFT_BUILD" ${{ inputs.dry_run && '--dry-run' || '' }}
       - name: Apply the approved review media operation
-        if: inputs.draft_action == 'withdraw' || inputs.draft_action == 'restore' || inputs.draft_action == 'verify'
+        if: inputs.draft_action == 'withdraw' || inputs.draft_action == 'upload' || inputs.draft_action == 'restore' || inputs.draft_action == 'verify'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -89,7 +89,7 @@ jobs:
           APPROVED_SUBMISSION: ${{ inputs.submission_id }}
         run: python3 -u scripts/replace_review_media.py "$MEDIA_ACTION" --build "$APPROVED_BUILD" --submission "$APPROVED_SUBMISSION" ${{ inputs.dry_run && '--dry-run' || '' }}
       - uses: actions/upload-artifact@v5
-        if: always() && (inputs.draft_action == 'withdraw' || inputs.draft_action == 'restore' || inputs.draft_action == 'verify')
+        if: always() && (inputs.draft_action == 'withdraw' || inputs.draft_action == 'upload' || inputs.draft_action == 'restore' || inputs.draft_action == 'verify')
         with:
           name: review-media-operation
           path: review-media-operation.json

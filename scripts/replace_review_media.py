@@ -1,6 +1,6 @@
 """Withdraw the approved Thirty submission and restore its exact selection.
 
-Media upload and final submission use the existing listing/submit operations.
+Media upload and final submission reuse the existing upload/submit helpers.
 This helper never changes product metadata, prices, builds or release options.
 """
 import argparse
@@ -166,12 +166,20 @@ def verify_media(client, version_id, config):
     return report
 
 
+def upload_media(client, version, config, replace):
+    require(version["attributes"]["appStoreState"] in EDITABLE, "The version is not editable")
+    locales = client.get(f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations")["data"]
+    matches = [v for v in locales if v["attributes"]["locale"] == config["locale"]]
+    require(len(matches) == 1, "Expected the approved Japanese localization")
+    replace(client, matches[0]["id"], config)
+
+
 def main():
-    from asc_metadata import Client, check_media_files
+    from asc_metadata import Client, check_media_files, replace_media
     from prepare_listing_draft import wait_for_media
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["withdraw", "restore", "verify"])
+    parser.add_argument("action", choices=["withdraw", "upload", "restore", "verify"])
     parser.add_argument("--build", required=True)
     parser.add_argument("--submission", required=True)
     parser.add_argument("--dry-run", action="store_true")
@@ -196,6 +204,9 @@ def main():
                     selected, version = cancel_once(client, selected["id"], version["id"])
                     report.update({"version_state": version["attributes"]["appStoreState"],
                                    "submission_state": selected["attributes"]["state"], "cancelled": True})
+        elif args.action == "upload":
+            upload_media(client, version, config, replace_media)
+            report["uploaded"] = not args.dry_run
         elif args.action == "restore":
             require(version["attributes"]["appStoreState"] in EDITABLE, "The version is not editable")
             wait_for_media(client, version, config)

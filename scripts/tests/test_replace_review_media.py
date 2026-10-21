@@ -2,10 +2,10 @@ import copy
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from replace_review_media import PURCHASE_VERSION, cancel_once, restore_items, validate_partial, validate_target
+from replace_review_media import PURCHASE_VERSION, cancel_once, restore_items, upload_media, validate_partial, validate_target
 
 
 def item(kind, identifier):
@@ -99,6 +99,23 @@ class GuardTests(unittest.TestCase):
         restore_items(client, "version", [])
         self.assertEqual(len(client.selection), 2)
         self.assertEqual(len(client.writes), 3)
+
+    def test_media_cannot_be_replaced_while_the_version_is_in_review(self):
+        client, replace = Mock(), Mock()
+        with self.assertRaises(RuntimeError):
+            upload_media(client, {"id": "version", "attributes": {"appStoreState": "IN_REVIEW"}},
+                         {"locale": "ja"}, replace)
+        replace.assert_not_called()
+        client.get.assert_not_called()
+
+    def test_media_replacement_targets_only_the_approved_localization(self):
+        client, replace = Mock(), Mock()
+        client.get.return_value = {"data": [{"id": "english", "attributes": {"locale": "en-US"}},
+                                           {"id": "japanese", "attributes": {"locale": "ja"}}]}
+        config = {"locale": "ja"}
+        upload_media(client, {"id": "version", "attributes": {"appStoreState": "DEVELOPER_REJECTED"}},
+                     config, replace)
+        replace.assert_called_once_with(client, "japanese", config)
 
 
 if __name__ == "__main__":
