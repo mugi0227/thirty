@@ -3,7 +3,7 @@
 2026年10月12日時点のAppleの要件を確認して作成したチェックリストです。
 自動で用意できるもの（スクリーンショット、プレビュー動画、文章）と、Apple Developerアカウントで本人が行う手続きを分けています。
 
-2026年10月21日に、掲載素材の価格表現を修正しました。[修正・検証記録](media-update-20261021.md)を参照してください。Apple側は同日の確認時点でビルド22が審査待ちで、この素材修正では取り下げ・再提出は行っていません。
+2026年10月21日に、掲載素材の価格表現を修正し、Apple側の画像26枚・動画1本を差し替えました。同日16:24 UTCにビルド22とThirty+の再提出が受理され、現在は審査待ちです。[修正・反映・検証記録](media-update-20261021.md)を参照してください。
 
 ## 自動で用意しているもの
 
@@ -93,7 +93,7 @@ Dynamic Islandの場面では上端を固定して最大1.5倍まで拡大し、
 4. `Fill App Store listing` の `media_run_id` に、その成功した `Build iOS` の実行IDを入力します。`media=true` で、新しく撮影した素材が使われます。空欄の場合は従来どおりリポジトリ内の素材を使います。
 5. `dry_run=true` で変更対象を確認し、その後 `dry_run=false` で掲載情報を保存します。`prepare_review` は価格・年齢制限・ビルド選択も更新するため、素材だけ更新する場合は `false` にします。
 
-このワークフローはApp Reviewへの提出を行いません。提出前に、最新のTestFlightビルドと実際に購入できるThirty+（`jp.mugilab.thirty.diagnostic`）が審査対象になっていることを確認します。
+`draft_action=listing` はApp Reviewへの提出を行いません。提出前に、確認済みのTestFlightビルドと実際に購入できるThirty+（`jp.mugilab.thirty.diagnostic`）が審査対象になっていることを確認します。提出には `draft_action=submit` と対象の `target_build`・`submission_id` を明示します。
 
 ### 「審査へ追加済み・未提出」から素材を更新する場合
 
@@ -104,5 +104,18 @@ Appleの `READY_FOR_REVIEW` では画像・動画を編集できません（[App
 `draft_action=finish` と確認済みの `target_build` を指定すると、画像と動画の処理完了を確認して、そのビルドとアプリが実際に使うThirty+を下書きへ追加します。旧商品の審査項目は、新しい商品の追加が成功してから外します。
 
 この操作は未提出の下書きだけを対象にします。送信済み・審査中の版には対応せず、App Reviewへの送信は行いません。
+
+### 提出済みのビルド22の素材を更新する場合
+
+`scripts/replace_review_media.py` は、今回承認されたバージョン1.0・ビルド22・現在のThirty+審査版だけを扱います。対象が異なる場合は停止します。各操作は `Fill App Store listing` の `draft_action`、`target_build=22`、対象の `submission_id` を指定して実行します。
+
+1. `withdraw` で対象の提出内容を確認し、取り下げます。`DEVELOPER_REJECTED` になったことを確認します。
+2. `upload` で、リポジトリに取り込んだ検証済みの画像26枚と動画1本を差し替えます。この操作は日本語の画像・動画だけを変更します。`media_run_id`・`media`・`prepare_review` は使用しません。
+3. `restore` で、全27点の処理完了とファイル名・容量・取得できたチェックサムの一致を確認します。その後、アプリ版、同じThirty+審査版の順に未提出の下書きへ追加します。出力の新しい `submission_id` を控えます。
+4. 新しいIDを指定した `submit` で提出し、`verify` で提出状態・ビルド22・Thirty+・全27点を読み取り確認します。
+
+変更操作はまず `dry_run=true` で確認し、ユーザーが承認した範囲で `dry_run=false` を実行します。取り下げると審査待ちの順番がリセットされます。[2026年10月21日の実行記録](media-update-20261021.md)を参照してください。
+
+`status` は、処理待ちを含む全素材の状態とファイルの一致をGETだけで報告します。動画は現行の `videoDeliveryState` を優先します。画像が1枚だけ `UPLOAD_COMPLETE` のまま止まった場合の `retry-screenshot` は、新しい画像が処理済み・チェックサム一致になってから元の画像を外し、表示順を維持します。審査待ち・審査中には実行できません。
 
 掲載画像は、基本のタイマー・横向き・アクセスガイドに続いて、休憩とマイセットを案内する順序です。`release/metadata-ja.json` の `screenshot_order` で指定します。

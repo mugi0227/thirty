@@ -36,11 +36,14 @@ def add(client, submission_id, name, kind, identifier):
 
 
 def wait_for_media(client, version, config):
+    from media_state import delivery_state
+
     locales = client.get(f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations")["data"]
     locale = next(x for x in locales if x["attributes"]["locale"] == config["locale"])
     deadline = time.monotonic() + 480
     while True:
         states = []
+        pending = []
         for collection, field, assets in [("appScreenshotSets", "screenshotDisplayType", "appScreenshots"),
                                            ("appPreviewSets", "previewType", "appPreviews")]:
             sets = client.get(f"/v1/appStoreVersionLocalizations/{locale['id']}/{collection}")["data"]
@@ -51,8 +54,17 @@ def wait_for_media(client, version, config):
                 expected_count = (8 if "IPAD" in display else 9) if assets == "appScreenshots" else 1
                 if len(media) != expected_count:
                     raise RuntimeError(f"{display}: expected {expected_count} assets, found {len(media)}")
-                states.extend(x["attributes"].get("assetDeliveryState", {}).get("state") for x in media)
+                for item in media:
+                    attributes = item["attributes"]
+                    state = delivery_state(attributes, video=assets == "appPreviews")
+                    states.append(state)
+                    if state != "COMPLETE":
+                        pending.append({"file": attributes["fileName"], "state": state,
+                                        "asset_delivery": attributes.get("assetDeliveryState"),
+                                        "video_delivery": attributes.get("videoDeliveryState")})
         print("Media processing:", {state: states.count(state) for state in set(states)}, flush=True)
+        if pending:
+            print("Pending media:", json.dumps(pending, ensure_ascii=False), flush=True)
         if all(state == "COMPLETE" for state in states):
             return
         if "FAILED" in states or time.monotonic() >= deadline:

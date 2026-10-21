@@ -1,6 +1,6 @@
 name: Fill App Store listing
-# Writes the listing text and uploads screenshots and the app preview to App
-# Store Connect from release/metadata-ja.json. Runs on Linux; no Mac needed.
+# Updates the listing/media or explicitly manages the selected review submission
+# in App Store Connect. Runs on Linux; no Mac needed.
 # Uses the same secrets as "Upload to App Store Connect".
 on:
   workflow_dispatch:
@@ -8,14 +8,14 @@ on:
       draft_action:
         description: Update listing/draft, or explicitly submit the selected review draft
         type: choice
-        options: [listing, inspect, reopen, finish, submit]
+        options: [listing, inspect, reopen, finish, submit, withdraw, upload, restore, verify, status, retry-screenshot]
         default: listing
       target_build:
-        description: Exact approved build number when finishing or submitting
+        description: Exact approved build number for draft/review operations
         type: string
         default: ''
       submission_id:
-        description: Exact approved review draft ID (required only for submit)
+        description: Exact approved submission ID (required for submit and media operations)
         type: string
         default: ''
       media_run_id:
@@ -70,7 +70,7 @@ jobs:
           github-token: ${{ github.token }}
       - run: python3 -m pip install --quiet "pyjwt[crypto]==2.10.1" requests==2.32.3
       - name: Prepare only the unsubmitted draft
-        if: inputs.draft_action != 'listing' && inputs.draft_action != 'submit'
+        if: inputs.draft_action == 'inspect' || inputs.draft_action == 'reopen' || inputs.draft_action == 'finish'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -78,6 +78,22 @@ jobs:
           DRAFT_ACTION: ${{ inputs.draft_action }}
           DRAFT_BUILD: ${{ inputs.target_build }}
         run: python3 -u scripts/prepare_listing_draft.py "$DRAFT_ACTION" --build "$DRAFT_BUILD" ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: Apply the approved review media operation
+        if: inputs.draft_action == 'withdraw' || inputs.draft_action == 'upload' || inputs.draft_action == 'restore' || inputs.draft_action == 'verify' || inputs.draft_action == 'status' || inputs.draft_action == 'retry-screenshot'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MEDIA_ACTION: ${{ inputs.draft_action }}
+          APPROVED_BUILD: ${{ inputs.target_build }}
+          APPROVED_SUBMISSION: ${{ inputs.submission_id }}
+        run: python3 -u scripts/replace_review_media.py "$MEDIA_ACTION" --build "$APPROVED_BUILD" --submission "$APPROVED_SUBMISSION" ${{ inputs.dry_run && '--dry-run' || '' }}
+      - uses: actions/upload-artifact@v5
+        if: always() && (inputs.draft_action == 'withdraw' || inputs.draft_action == 'upload' || inputs.draft_action == 'restore' || inputs.draft_action == 'verify' || inputs.draft_action == 'status' || inputs.draft_action == 'retry-screenshot')
+        with:
+          name: review-media-operation
+          path: review-media-operation.json
+          retention-days: 30
       - name: Submit the explicitly approved review draft
         if: inputs.draft_action == 'submit'
         env:
