@@ -15,7 +15,7 @@ on:
         type: string
         default: ''
       submission_id:
-        description: Exact approved submission ID (required for submit/withdraw/upload/restore/verify/status)
+        description: Exact approved submission ID (required for submit and media operations)
         type: string
         default: ''
       media_run_id:
